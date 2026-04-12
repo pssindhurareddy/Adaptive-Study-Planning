@@ -1,0 +1,24 @@
+{
+  "overview": "StudyFlow is a student study planner demonstrating core Java concepts — Collections sorting, HashMap grouping, Enums, and OOP patterns. Features a daily schedule generator, priority queue visualization, subject leaderboard, and task statistics panel.",
+  "features": [
+    "Daily schedule generator using priority-based sorting (Comparator pattern)",
+    "Priority Queue visualization showing top tasks by deadline urgency and difficulty",
+    "Subject Performance Leaderboard ranked by completion percentage",
+    "Task Statistics panel grouping tasks by status (HashMap grouping concept)",
+    "Focus session management with Pomodoro tracking",
+    "Analytics with 7-day focus score history and per-subject charts",
+    "In-memory data storage with Java Collections patterns",
+    "Clean student-friendly UI with readable contrast and visible labels"
+  ],
+  "category": "productivity",
+  "tags": [
+    "study-planner",
+    "java-concepts",
+    "productivity",
+    "education",
+    "task-management",
+    "collections",
+    "pomodoro"
+  ],
+  "last_updated": "2026-04-12T10:38:01.647Z"
+}

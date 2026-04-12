@@ -1,0 +1,141 @@
+type WeeklyHours = 
+ record {
+   day: text;
+   hours: nat;
+ };
+type User = 
+ record {
+   fatigueLevel: nat;
+   id: nat;
+   maxDailyHours: nat;
+   name: text;
+ };
+type TaskUnit = 
+ record {
+   deadline: text;
+   difficulty: TaskDifficulty;
+   estimatedMinutes: nat;
+   id: nat;
+   status: TaskStatus;
+   subjectId: nat;
+   title: text;
+ };
+type TaskStatus = 
+ variant {
+   Completed;
+   InProgress;
+   Scheduled;
+ };
+type TaskStats = 
+ record {
+   completedCount: nat;
+   inProgressCount: nat;
+   scheduledCount: nat;
+ };
+type TaskDifficulty = 
+ variant {
+   High;
+   Low;
+   Medium;
+ };
+type SubjectPerformance = 
+ record {
+   avgScore: nat;
+   completedTasks: nat;
+   subjectName: text;
+ };
+type SubjectLeaderboardEntry = 
+ record {
+   completedTasks: nat;
+   completionRate: nat;
+   subjectId: nat;
+   subjectName: text;
+   totalTasks: nat;
+ };
+type Subject = 
+ record {
+   id: nat;
+   name: text;
+   weight: nat;
+ };
+type ScheduledBlock = 
+ record {
+   difficulty: TaskDifficulty;
+   estimatedMinutes: nat;
+   priorityScore: nat;
+   subjectName: text;
+   taskId: nat;
+   taskTitle: text;
+   timeSlot: text;
+ };
+type ProgressLog = 
+ record {
+   actualTime: nat;
+   completed: bool;
+   interruptions: nat;
+   taskId: nat;
+ };
+type PriorityQueueItem = 
+ record {
+   deadline: text;
+   difficulty: TaskDifficulty;
+   priorityScore: nat;
+   subjectName: text;
+   taskId: nat;
+   taskTitle: text;
+ };
+type FocusSession = 
+ record {
+   durationMinutes: nat;
+   isBreak: bool;
+   sessionNumber: nat;
+   taskId: nat;
+ };
+type FocusScorePoint = 
+ record {
+   date: text;
+   score: nat;
+ };
+type DashboardData = 
+ record {
+   completedTasks: nat;
+   dailyProgress: nat;
+   focusScore: nat;
+   inProgressTasks: nat;
+   scheduledTasks: nat;
+   stabilityScore: nat;
+   studyStreak: nat;
+   totalTasks: nat;
+ };
+type AnalyticsData = 
+ record {
+   focusScoreHistory: vec FocusScorePoint;
+   subjectPerformance: vec SubjectPerformance;
+   weeklyHours: vec WeeklyHours;
+ };
+service : {
+  addSubject: (name: text, weight: nat) -> (Subject);
+  addTask: (subjectId: nat, title: text, difficulty: TaskDifficulty,
+   estimatedMinutes: nat, deadline: text) -> (TaskUnit);
+  createUser: (name: text, maxDailyHours: nat, fatigueLevel: nat) -> (User);
+  deleteTask: (taskId: nat) -> (bool);
+  endFocusSession: () -> (opt ProgressLog);
+  getActiveSession: () -> (opt FocusSession) query;
+  getAnalytics: () -> (AnalyticsData) query;
+  getDailySchedule: () -> (vec ScheduledBlock) query;
+  getDashboard: () -> (DashboardData) query;
+  getPriorityQueue: () -> (vec PriorityQueueItem) query;
+  getSubjectLeaderboard: () -> (vec SubjectLeaderboardEntry) query;
+  getTaskStats: () -> (TaskStats) query;
+  getUser: () -> (opt User) query;
+  listSubjects: () -> (vec Subject) query;
+  listTasks: () -> (vec TaskUnit) query;
+  logProgress: (taskId: nat, completed: bool, actualTime: nat, interruptions:
+   nat) -> (ProgressLog);
+  recordInterruption: () -> ();
+  removeSubject: (id: nat) -> (bool);
+  seedDemoData: () -> ();
+  startFocusSession: (taskId: nat) -> (FocusSession);
+  updateTaskStatus: (taskId: nat, status: TaskStatus) -> (opt TaskUnit);
+  updateUser: (name: text, maxDailyHours: nat, fatigueLevel: nat) -> (User);
+}
