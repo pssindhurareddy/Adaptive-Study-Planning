@@ -23,7 +23,9 @@
     "./package.json": "./package.json"
   },
   "devDependencies": {
-    "@types/node": "^25.5.0"
+    "@types/node": "^25.5.0",
+    "typescript": "^5.8.3",
+    "rimraf": "^6.0.1"
   },
   "dependencies": {
     "@icp-sdk/core": "~4.1.0"
