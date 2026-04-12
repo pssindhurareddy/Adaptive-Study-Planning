@@ -325,7 +325,7 @@ export default function Dashboard() {
   const completedCount = taskStats?.completedCount ?? 0;
 
   const activeTaskTitle = activeSession
-    ? (activeSession.taskTitle || tasks.find((t) => t.id === activeSession.taskId)?.title)
+    ? tasks.find((t) => t.id === activeSession.taskId)?.title
     : null;
 
   const today = new Date().toLocaleDateString("en-US", {
