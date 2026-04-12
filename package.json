@@ -1,5 +1,7 @@
 {
   "name": "@studyflow/template-app",
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.15.4",
   "type": "module",
   "engines": {
     "node": ">=16.0.0",
