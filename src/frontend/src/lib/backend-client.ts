@@ -5,16 +5,22 @@
  */
 import { createActor } from "../backend";
 import type {
+  Achievement,
   AnalyticsData,
+  BreakBlock,
+  BurnoutStatus,
   DashboardData,
+  ExamCollision,
   FocusSession,
   PriorityQueueItem,
+  ProcrastinationDebt,
   ProgressLog,
   Recommendation,
   RecoveryPlan,
   ScheduledBlock,
   Subject,
   SubjectLeaderboardEntry,
+  TaskDependency,
   TaskDifficulty,
   TaskStats,
   TaskStatus,
@@ -239,6 +245,96 @@ export async function logProgress(
 // Analytics
 export async function getAnalytics(actor: unknown): Promise<AnalyticsData> {
   return callActor<AnalyticsData>(actor, "getAnalytics");
+}
+
+// Burnout Detector
+export async function getBurnout(actor: unknown): Promise<BurnoutStatus> {
+  return callActor<BurnoutStatus>(actor, "getBurnout");
+}
+
+// Exam Collision Detector
+export async function getCollisions(actor: unknown): Promise<ExamCollision[]> {
+  return callActor<ExamCollision[]>(actor, "getCollisions");
+}
+
+export async function resolveCollision(
+  actor: unknown,
+  taskId: number,
+  shiftDays: number,
+): Promise<TaskUnit | null> {
+  return callActor<TaskUnit | null>(
+    actor,
+    "resolveCollision",
+    BigInt(taskId),
+    BigInt(shiftDays),
+  );
+}
+
+// Procrastination Debt Tracker
+export async function getProcrastinationDebt(
+  actor: unknown,
+): Promise<ProcrastinationDebt> {
+  return callActor<ProcrastinationDebt>(actor, "getProcrastinationDebt");
+}
+
+// Achievements
+export async function getAchievements(actor: unknown): Promise<Achievement[]> {
+  return callActor<Achievement[]>(actor, "getAchievements");
+}
+
+// Break Scheduler
+export async function getBreaks(actor: unknown): Promise<BreakBlock[]> {
+  return callActor<BreakBlock[]>(actor, "getBreaks");
+}
+
+// Undo / Redo
+export async function undoLastTaskChange(actor: unknown): Promise<TaskUnit[]> {
+  return callActor<TaskUnit[]>(actor, "undoLastTaskChange");
+}
+
+export async function redoLastTaskChange(actor: unknown): Promise<TaskUnit[]> {
+  return callActor<TaskUnit[]>(actor, "redoLastTaskChange");
+}
+
+export async function canUndo(actor: unknown): Promise<boolean> {
+  return callActor<boolean>(actor, "canUndo");
+}
+
+export async function canRedo(actor: unknown): Promise<boolean> {
+  return callActor<boolean>(actor, "canRedo");
+}
+
+// Dependency Graph
+export async function getDependencyGraph(
+  actor: unknown,
+): Promise<TaskDependency[]> {
+  return callActor<TaskDependency[]>(actor, "getDependencyGraph");
+}
+
+export async function addDependency(
+  actor: unknown,
+  taskId: number,
+  dependsOnId: number,
+): Promise<TaskDependency[]> {
+  return callActor<TaskDependency[]>(
+    actor,
+    "addDependency",
+    BigInt(taskId),
+    BigInt(dependsOnId),
+  );
+}
+
+export async function removeDependency(
+  actor: unknown,
+  taskId: number,
+  dependsOnId: number,
+): Promise<TaskDependency[]> {
+  return callActor<TaskDependency[]>(
+    actor,
+    "removeDependency",
+    BigInt(taskId),
+    BigInt(dependsOnId),
+  );
 }
 
 // Recovery (kept for backward compatibility)

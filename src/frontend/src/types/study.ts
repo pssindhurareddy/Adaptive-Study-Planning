@@ -132,6 +132,49 @@ export interface AnalyticsData {
   weeklyHours: WeeklyHours[];
 }
 
+// ── New feature types ─────────────────────────────────────────────────────────
+
+export interface BurnoutStatus {
+  level: "Low" | "Medium" | "High";
+  score: number;
+  advice: string;
+}
+
+export interface ExamCollision {
+  taskId: number;
+  taskTitle: string;
+  conflictsWith: number;
+  conflictsWithTitle: string;
+  sharedDate: string;
+  severity: "Low" | "Medium" | "High";
+  penaltyLabel: string;
+}
+
+export interface ProcrastinationDebt {
+  overdueCount: number;
+  debtScore: number;
+  overdueTaskTitles: string[];
+}
+
+export interface Achievement {
+  id: number;
+  title: string;
+  description: string;
+  icon: string;
+  earned: boolean;
+}
+
+export interface BreakBlock {
+  afterTaskId: number;
+  breakType: "Short" | "Long";
+  durationMinutes: number;
+}
+
+export interface TaskDependency {
+  taskId: number;
+  dependsOnId: number;
+}
+
 // Recovery plan (kept for backend-client compatibility)
 export interface RecoveryTask {
   originalTaskId: string;

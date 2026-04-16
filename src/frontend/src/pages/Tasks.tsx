@@ -2,33 +2,46 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { mockBackend } from "../../../../vendor/core-infrastructure/dist/mocks/backend.js";
 import {
   AlertCircle,
   BookOpen,
   Calendar,
+  CalendarDays,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock,
+  GitBranch,
+  List,
   ListTodo,
   Play,
   Plus,
+  Redo2,
   StopCircle,
   Tag,
   Trash2,
+  Undo2,
   X,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useMemo, useState } from "react";
+import { mockBackend } from "../../../../vendor/core-infrastructure/dist/mocks/backend.js";
 
 import {
   useActiveSession,
+  useAddDependency,
   useAddSubject,
+  useCanUndoRedo,
   useDeleteTask,
+  useDependencyGraph,
   useEndFocus,
+  useRedoTask,
+  useRemoveDependency,
   useRemoveSubject,
   useStartFocus,
   useSubjects,
   useTasks,
+  useUndoTask,
   useUpdateTaskStatus,
 } from "../hooks/use-study-data";
 import { addTask } from "../lib/backend-client";
@@ -535,6 +548,375 @@ function TaskCard({
   );
 }
 
+// ── Monthly Calendar View ─────────────────────────────────────────────────────
+
+function MonthlyCalendar({
+  tasks,
+  isDark,
+}: { tasks: TaskUnit[]; isDark: boolean }) {
+  const [year, setYear] = useState(() => new Date().getFullYear());
+  const [month, setMonth] = useState(() => new Date().getMonth());
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDow = new Date(year, month, 1).getDay(); // 0=Sun
+
+  const tasksByDay = useMemo(() => {
+    const map: Record<number, TaskUnit[]> = {};
+    for (const t of tasks) {
+      if (!t.deadline) continue;
+      const d = new Date(t.deadline);
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        const day = d.getDate();
+        if (!map[day]) map[day] = [];
+        map[day].push(t);
+      }
+    }
+    return map;
+  }, [tasks, year, month]);
+
+  const monthName = new Date(year, month, 1).toLocaleString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
+  function prevMonth() {
+    if (month === 0) {
+      setMonth(11);
+      setYear((y) => y - 1);
+    } else setMonth((m) => m - 1);
+  }
+  function nextMonth() {
+    if (month === 11) {
+      setMonth(0);
+      setYear((y) => y + 1);
+    } else setMonth((m) => m + 1);
+  }
+
+  const diffColor = (diff: string) =>
+    diff === "High"
+      ? isDark
+        ? "#fca5a5"
+        : "#dc2626"
+      : diff === "Medium"
+        ? isDark
+          ? "#fcd34d"
+          : "#ca8a04"
+        : isDark
+          ? "#6ee7b7"
+          : "#16a34a";
+
+  return (
+    <div
+      className="rounded-lg p-5"
+      style={{
+        background: isDark ? "#1e2128" : "#ffffff",
+        border: `1px solid ${isDark ? "#2d3748" : "#e5e7eb"}`,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+      }}
+      data-ocid="monthly-calendar"
+    >
+      <div className="flex items-center justify-between mb-4">
+        <h3
+          className="font-semibold text-sm"
+          style={{ color: isDark ? "#f1f5f9" : "#111827" }}
+        >
+          Monthly Calendar
+        </h3>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={prevMonth}
+            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+            aria-label="Previous month"
+          >
+            <ChevronLeft
+              size={14}
+              style={{ color: isDark ? "#94a3b8" : "#6b7280" }}
+            />
+          </button>
+          <span
+            className="text-xs font-semibold w-36 text-center"
+            style={{ color: isDark ? "#f1f5f9" : "#111827" }}
+          >
+            {monthName}
+          </span>
+          <button
+            type="button"
+            onClick={nextMonth}
+            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+            aria-label="Next month"
+          >
+            <ChevronRight
+              size={14}
+              style={{ color: isDark ? "#94a3b8" : "#6b7280" }}
+            />
+          </button>
+        </div>
+      </div>
+
+      {/* Day headers */}
+      <div className="grid grid-cols-7 mb-1">
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+          <div
+            key={d}
+            className="text-center text-xs font-medium pb-1"
+            style={{ color: isDark ? "#64748b" : "#9ca3af" }}
+          >
+            {d}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar grid */}
+      <div className="grid grid-cols-7 gap-0.5">
+        {Array.from({ length: firstDow }, (_, i) => {
+          const padKey = `pad-${year}-${month}-pos${i}`;
+          return <div key={padKey} />;
+        })}
+        {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
+          const dayTasks = tasksByDay[day] ?? [];
+          const isToday =
+            new Date().getFullYear() === year &&
+            new Date().getMonth() === month &&
+            new Date().getDate() === day;
+          return (
+            <div
+              key={day}
+              className="rounded p-1 flex flex-col gap-0.5 min-h-[52px]"
+              style={{
+                background: isToday
+                  ? isDark
+                    ? "#1a2744"
+                    : "#eff6ff"
+                  : isDark
+                    ? "#252830"
+                    : "#f9fafb",
+                border: `1px solid ${isToday ? (isDark ? "#2a4a8c" : "#bfdbfe") : isDark ? "#2d3748" : "#e5e7eb"}`,
+              }}
+            >
+              <span
+                className="text-xs font-semibold"
+                style={{
+                  color: isToday
+                    ? isDark
+                      ? "#93c5fd"
+                      : "#1d4ed8"
+                    : isDark
+                      ? "#94a3b8"
+                      : "#6b7280",
+                }}
+              >
+                {day}
+              </span>
+              {dayTasks.slice(0, 2).map((t) => (
+                <span
+                  key={t.id}
+                  className="text-[10px] px-1 py-0.5 rounded truncate font-medium leading-tight"
+                  style={{
+                    background: isDark ? "#1e2128" : "#fff",
+                    color: diffColor(t.difficulty),
+                    border: `1px solid ${diffColor(t.difficulty)}33`,
+                  }}
+                  title={t.title}
+                >
+                  {t.title}
+                </span>
+              ))}
+              {dayTasks.length > 2 && (
+                <span
+                  className="text-[10px]"
+                  style={{ color: isDark ? "#64748b" : "#9ca3af" }}
+                >
+                  +{dayTasks.length - 2}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Dependency Graph Panel ────────────────────────────────────────────────────
+
+function DependencyGraphPanel({
+  tasks,
+  isDark,
+}: { tasks: TaskUnit[]; isDark: boolean }) {
+  const { data: deps = [] } = useDependencyGraph();
+  const addDep = useAddDependency();
+  const removeDep = useRemoveDependency();
+  const [fromId, setFromId] = useState("");
+  const [toId, setToId] = useState("");
+
+  const inputStyle = {
+    background: isDark ? "#252830" : "#ffffff",
+    border: `1px solid ${isDark ? "#2d3748" : "#d1d5db"}`,
+    color: isDark ? "#f1f5f9" : "#111827",
+  };
+
+  function taskTitle(id: number) {
+    return tasks.find((t) => Number(t.id) === id)?.title ?? `Task #${id}`;
+  }
+
+  function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!fromId || !toId || fromId === toId) return;
+    addDep.mutate(
+      { taskId: Number(fromId), dependsOnId: Number(toId) },
+      {
+        onSuccess: () => {
+          setFromId("");
+          setToId("");
+        },
+      },
+    );
+  }
+
+  return (
+    <div
+      className="rounded-lg p-5"
+      style={{
+        background: isDark ? "#1e2128" : "#ffffff",
+        border: `1px solid ${isDark ? "#2d3748" : "#e5e7eb"}`,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+      }}
+      data-ocid="dependency-graph"
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <GitBranch
+          size={14}
+          style={{ color: isDark ? "#94a3b8" : "#6b7280" }}
+        />
+        <h3
+          className="font-semibold text-sm"
+          style={{ color: isDark ? "#f1f5f9" : "#111827" }}
+        >
+          Task Dependency Graph
+        </h3>
+      </div>
+
+      {/* Add dependency form */}
+      <form
+        onSubmit={handleAdd}
+        className="flex items-center gap-2 mb-4 flex-wrap"
+      >
+        <select
+          value={fromId}
+          onChange={(e) => setFromId(e.target.value)}
+          className="flex-1 px-2 py-1.5 rounded text-xs outline-none"
+          style={inputStyle}
+        >
+          <option value="">Task (depends on)...</option>
+          {tasks
+            .filter((t) => t.status !== TaskStatus.Completed)
+            .map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.title}
+              </option>
+            ))}
+        </select>
+        <span
+          className="text-xs"
+          style={{ color: isDark ? "#64748b" : "#9ca3af" }}
+        >
+          needs
+        </span>
+        <select
+          value={toId}
+          onChange={(e) => setToId(e.target.value)}
+          className="flex-1 px-2 py-1.5 rounded text-xs outline-none"
+          style={inputStyle}
+        >
+          <option value="">Prerequisite task...</option>
+          {tasks
+            .filter((t) => String(t.id) !== fromId)
+            .map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.title}
+              </option>
+            ))}
+        </select>
+        <button
+          type="submit"
+          disabled={!fromId || !toId || fromId === toId || addDep.isPending}
+          className="px-3 py-1.5 rounded text-xs font-medium disabled:opacity-50"
+          style={{ background: "#4f46e5", color: "#fff", border: "none" }}
+        >
+          + Add
+        </button>
+      </form>
+
+      {/* Dep list */}
+      {deps.length === 0 ? (
+        <p
+          className="text-xs text-center py-4"
+          style={{ color: isDark ? "#64748b" : "#9ca3af" }}
+        >
+          No dependencies. Add one above.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {deps.map((d) => (
+            <div
+              key={`${d.taskId}-${d.dependsOnId}`}
+              className="flex items-center gap-2 px-3 py-2 rounded"
+              style={{
+                background: isDark ? "#252830" : "#f9fafb",
+                border: `1px solid ${isDark ? "#2d3748" : "#e5e7eb"}`,
+              }}
+            >
+              <span
+                className="text-xs flex-1"
+                style={{ color: isDark ? "#f1f5f9" : "#111827" }}
+              >
+                <span
+                  style={{
+                    color: isDark ? "#93c5fd" : "#2563eb",
+                    fontWeight: 600,
+                  }}
+                >
+                  {taskTitle(Number(d.taskId))}
+                </span>
+                <span style={{ color: isDark ? "#64748b" : "#9ca3af" }}>
+                  {" "}
+                  → needs →{" "}
+                </span>
+                <span
+                  style={{
+                    color: isDark ? "#6ee7b7" : "#16a34a",
+                    fontWeight: 600,
+                  }}
+                >
+                  {taskTitle(Number(d.dependsOnId))}
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  removeDep.mutate({
+                    taskId: Number(d.taskId),
+                    dependsOnId: Number(d.dependsOnId),
+                  })
+                }
+                disabled={removeDep.isPending}
+                className="text-xs px-2 py-0.5 rounded disabled:opacity-50"
+                style={{
+                  color: isDark ? "#f87171" : "#dc2626",
+                  background: isDark ? "#3d1515" : "#fef2f2",
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Subject Manager Panel ─────────────────────────────────────────────────────
 
 function SubjectManager({ isDark }: { isDark: boolean }) {
@@ -678,6 +1060,8 @@ export default function Tasks() {
 
   const [activeFilter, setActiveFilter] = useState<FilterTab>("All");
   const [showForm, setShowForm] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [showDepGraph, setShowDepGraph] = useState(false);
   const [form, setForm] = useState<FormState>({
     subjectId: "",
     title: "",
@@ -693,6 +1077,9 @@ export default function Tasks() {
   const endFocus = useEndFocus();
   const updateStatus = useUpdateTaskStatus();
   const deleteTask = useDeleteTask();
+  const undoTask = useUndoTask();
+  const redoTask = useRedoTask();
+  const { data: canUndoRedo } = useCanUndoRedo();
 
   const actor = mockBackend;
   const queryClient = useQueryClient();
@@ -803,21 +1190,117 @@ export default function Tasks() {
               Manage your study tasks and track progress
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowForm((v) => !v)}
-            className="flex items-center gap-2 px-4 py-2 rounded text-sm font-medium transition-colors"
-            style={{ background: "#2563eb", color: "#fff", border: "none" }}
-            data-ocid="add-task-btn"
-          >
-            <Plus size={15} />
-            Add Task
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Undo / Redo */}
+            <button
+              type="button"
+              title="Undo last change"
+              disabled={!canUndoRedo?.canUndo || undoTask.isPending}
+              onClick={() => undoTask.mutate()}
+              className="flex items-center gap-1 px-3 py-2 rounded text-sm font-medium disabled:opacity-40 transition-colors"
+              style={{
+                background: isDark ? dark.cardAlt : "#f3f4f6",
+                border: `1px solid ${isDark ? dark.border : "#d1d5db"}`,
+                color: isDark ? dark.textSecondary : "#374151",
+              }}
+              data-ocid="undo-btn"
+            >
+              <Undo2 size={13} />
+              Undo
+            </button>
+            <button
+              type="button"
+              title="Redo last change"
+              disabled={!canUndoRedo?.canRedo || redoTask.isPending}
+              onClick={() => redoTask.mutate()}
+              className="flex items-center gap-1 px-3 py-2 rounded text-sm font-medium disabled:opacity-40 transition-colors"
+              style={{
+                background: isDark ? dark.cardAlt : "#f3f4f6",
+                border: `1px solid ${isDark ? dark.border : "#d1d5db"}`,
+                color: isDark ? dark.textSecondary : "#374151",
+              }}
+              data-ocid="redo-btn"
+            >
+              <Redo2 size={13} />
+              Redo
+            </button>
+            {/* Dependency graph toggle */}
+            <button
+              type="button"
+              onClick={() => setShowDepGraph((v) => !v)}
+              title="Toggle dependency graph"
+              className="flex items-center gap-1 px-3 py-2 rounded text-sm font-medium transition-colors"
+              style={{
+                background: showDepGraph
+                  ? "#4f46e5"
+                  : isDark
+                    ? dark.cardAlt
+                    : "#f3f4f6",
+                border: `1px solid ${showDepGraph ? "#4338ca" : isDark ? dark.border : "#d1d5db"}`,
+                color: showDepGraph
+                  ? "#fff"
+                  : isDark
+                    ? dark.textSecondary
+                    : "#374151",
+              }}
+              data-ocid="dep-graph-btn"
+            >
+              <GitBranch size={13} />
+              Deps
+            </button>
+            {/* View toggle */}
+            <button
+              type="button"
+              onClick={() =>
+                setViewMode((v) => (v === "list" ? "calendar" : "list"))
+              }
+              className="flex items-center gap-1 px-3 py-2 rounded text-sm font-medium transition-colors"
+              style={{
+                background:
+                  viewMode === "calendar"
+                    ? "#0891b2"
+                    : isDark
+                      ? dark.cardAlt
+                      : "#f3f4f6",
+                border: `1px solid ${viewMode === "calendar" ? "#0e7490" : isDark ? dark.border : "#d1d5db"}`,
+                color:
+                  viewMode === "calendar"
+                    ? "#fff"
+                    : isDark
+                      ? dark.textSecondary
+                      : "#374151",
+              }}
+              data-ocid="view-toggle-btn"
+            >
+              {viewMode === "list" ? (
+                <>
+                  <CalendarDays size={13} /> Calendar
+                </>
+              ) : (
+                <>
+                  <List size={13} /> List
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowForm((v) => !v)}
+              className="flex items-center gap-2 px-4 py-2 rounded text-sm font-medium transition-colors"
+              style={{ background: "#2563eb", color: "#fff", border: "none" }}
+              data-ocid="add-task-btn"
+            >
+              <Plus size={15} />
+              Add Task
+            </button>
+          </div>
         </div>
       </div>
 
       {/* ── Subject Manager ── */}
       <SubjectManager isDark={isDark} />
+
+      {/* ── Dependency Graph (collapsible) ── */}
+      {showDepGraph && <DependencyGraphPanel tasks={tasks} isDark={isDark} />}
 
       {/* ── Active Session Banner ── */}
       {activeSession && (
@@ -837,7 +1320,8 @@ export default function Tasks() {
                   className="text-xs font-medium"
                   style={{ color: isDark ? "#93c5fd" : "#1d4ed8" }}
                 >
-                  {activeSession.isBreak ? "Break" : "Focus Session"} · Session #{activeSession.sessionNumber}
+                  {activeSession.isBreak ? "Break" : "Focus Session"} · Session
+                  #{activeSession.sessionNumber}
                 </p>
                 <p
                   className="font-semibold text-sm mt-0.5"
@@ -854,7 +1338,6 @@ export default function Tasks() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-
               <button
                 type="button"
                 onClick={() => endFocus.mutate()}
@@ -1065,144 +1548,152 @@ export default function Tasks() {
         </div>
       )}
 
-      {/* ── Filter Tabs ── */}
-      <div
-        className="rounded-lg p-2 flex items-center gap-1 flex-wrap"
-        style={cardStyle}
-        data-ocid="filter-tabs"
-      >
-        {FILTER_TABS.map(({ id, label }) => {
-          const active = activeFilter === id;
-          const count = counts[id as keyof typeof counts] ?? 0;
-          return (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setActiveFilter(id)}
-              className="px-3 py-1.5 rounded text-sm font-medium transition-colors"
-              style={{
-                background: active ? "#2563eb" : "transparent",
-                color: active
-                  ? "#fff"
-                  : isDark
-                    ? dark.textSecondary
-                    : "#374151",
-              }}
-              onMouseEnter={(e) => {
-                if (!active)
-                  (e.currentTarget as HTMLButtonElement).style.background =
-                    isDark ? dark.cardAlt : "#f3f4f6";
-              }}
-              onMouseLeave={(e) => {
-                if (!active)
-                  (e.currentTarget as HTMLButtonElement).style.background =
-                    "transparent";
-              }}
-              data-ocid={`filter-tab-${id.toLowerCase()}`}
-            >
-              {label}
-              <span
-                className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs"
-                style={{
-                  background: active
-                    ? "#1d4ed8"
-                    : isDark
-                      ? dark.cardAlt
-                      : "#f3f4f6",
-                  color: active
-                    ? "#bfdbfe"
-                    : isDark
-                      ? dark.textMuted
-                      : "#6b7280",
-                }}
-              >
-                {count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      {/* ── Monthly Calendar (when in calendar mode) ── */}
+      {viewMode === "calendar" && (
+        <MonthlyCalendar tasks={tasks} isDark={isDark} />
+      )}
 
-      {/* ── Task List ── */}
-      {tasksLoading ? (
-        <div className="flex flex-col gap-3">
-          {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-28 rounded-lg" />
-          ))}
-        </div>
-      ) : filteredTasks.length === 0 ? (
+      {/* ── Filter Tabs (list mode only) ── */}
+      {viewMode === "list" && (
         <div
-          className="flex flex-col items-center gap-3 py-16 rounded-lg text-center"
-          style={{
-            background: isDark ? dark.card : "#ffffff",
-            border: `1px dashed ${isDark ? dark.border : "#d1d5db"}`,
-          }}
-          data-ocid="empty-tasks-state"
+          className="rounded-lg p-2 flex items-center gap-1 flex-wrap"
+          style={cardStyle}
+          data-ocid="filter-tabs"
         >
-          <ListTodo
-            size={36}
-            style={{ color: isDark ? dark.textMuted : "#d1d5db" }}
-          />
-          <div>
-            <p
-              className="font-medium text-base"
-              style={{ color: isDark ? dark.textSecondary : "#374151" }}
-            >
-              {activeFilter === "All"
-                ? "No tasks yet"
-                : `No ${activeFilter} tasks`}
-            </p>
-            <p
-              className="text-sm mt-1"
-              style={{ color: isDark ? dark.textMuted : "#9ca3af" }}
-            >
-              {activeFilter === "All"
-                ? "Click 'Add Task' above to create your first task"
-                : "Change the filter to see other tasks"}
-            </p>
-          </div>
-          {activeFilter === "All" && (
-            <button
-              type="button"
-              onClick={() => setShowForm(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded text-sm font-medium transition-colors mt-1"
-              style={{ background: "#2563eb", color: "#fff", border: "none" }}
-            >
-              <Plus size={14} />
-              Add First Task
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {filteredTasks.map((task: TaskUnit) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              isDark={isDark}
-              isCurrentlyActive={String(activeTaskId) === String(task.id)}
-              onStart={(id) => startFocus.mutate(id)}
-              onComplete={(id) =>
-                updateStatus.mutate({
-                  taskId: id,
-                  status: TaskStatus.Completed,
-                })
-              }
-              onDelete={(id) => deleteTask.mutate(id)}
-              isStarting={
-                startFocus.isPending && startFocus.variables === task.id
-              }
-              isCompleting={
-                updateStatus.isPending &&
-                updateStatus.variables?.taskId === task.id
-              }
-              isDeleting={
-                deleteTask.isPending && deleteTask.variables === task.id
-              }
-            />
-          ))}
+          {FILTER_TABS.map(({ id, label }) => {
+            const active = activeFilter === id;
+            const count = counts[id as keyof typeof counts] ?? 0;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setActiveFilter(id)}
+                className="px-3 py-1.5 rounded text-sm font-medium transition-colors"
+                style={{
+                  background: active ? "#2563eb" : "transparent",
+                  color: active
+                    ? "#fff"
+                    : isDark
+                      ? dark.textSecondary
+                      : "#374151",
+                }}
+                onMouseEnter={(e) => {
+                  if (!active)
+                    (e.currentTarget as HTMLButtonElement).style.background =
+                      isDark ? dark.cardAlt : "#f3f4f6";
+                }}
+                onMouseLeave={(e) => {
+                  if (!active)
+                    (e.currentTarget as HTMLButtonElement).style.background =
+                      "transparent";
+                }}
+                data-ocid={`filter-tab-${id.toLowerCase()}`}
+              >
+                {label}
+                <span
+                  className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs"
+                  style={{
+                    background: active
+                      ? "#1d4ed8"
+                      : isDark
+                        ? dark.cardAlt
+                        : "#f3f4f6",
+                    color: active
+                      ? "#bfdbfe"
+                      : isDark
+                        ? dark.textMuted
+                        : "#6b7280",
+                  }}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
+
+      {/* ── Task List (list mode only) ── */}
+      {viewMode === "list" &&
+        (tasksLoading ? (
+          <div className="flex flex-col gap-3">
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-28 rounded-lg" />
+            ))}
+          </div>
+        ) : filteredTasks.length === 0 ? (
+          <div
+            className="flex flex-col items-center gap-3 py-16 rounded-lg text-center"
+            style={{
+              background: isDark ? dark.card : "#ffffff",
+              border: `1px dashed ${isDark ? dark.border : "#d1d5db"}`,
+            }}
+            data-ocid="empty-tasks-state"
+          >
+            <ListTodo
+              size={36}
+              style={{ color: isDark ? dark.textMuted : "#d1d5db" }}
+            />
+            <div>
+              <p
+                className="font-medium text-base"
+                style={{ color: isDark ? dark.textSecondary : "#374151" }}
+              >
+                {activeFilter === "All"
+                  ? "No tasks yet"
+                  : `No ${activeFilter} tasks`}
+              </p>
+              <p
+                className="text-sm mt-1"
+                style={{ color: isDark ? dark.textMuted : "#9ca3af" }}
+              >
+                {activeFilter === "All"
+                  ? "Click 'Add Task' above to create your first task"
+                  : "Change the filter to see other tasks"}
+              </p>
+            </div>
+            {activeFilter === "All" && (
+              <button
+                type="button"
+                onClick={() => setShowForm(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded text-sm font-medium transition-colors mt-1"
+                style={{ background: "#2563eb", color: "#fff", border: "none" }}
+              >
+                <Plus size={14} />
+                Add First Task
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {filteredTasks.map((task: TaskUnit) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                isDark={isDark}
+                isCurrentlyActive={String(activeTaskId) === String(task.id)}
+                onStart={(id) => startFocus.mutate(id)}
+                onComplete={(id) =>
+                  updateStatus.mutate({
+                    taskId: id,
+                    status: TaskStatus.Completed,
+                  })
+                }
+                onDelete={(id) => deleteTask.mutate(id)}
+                isStarting={
+                  startFocus.isPending && startFocus.variables === task.id
+                }
+                isCompleting={
+                  updateStatus.isPending &&
+                  updateStatus.variables?.taskId === task.id
+                }
+                isDeleting={
+                  deleteTask.isPending && deleteTask.variables === task.id
+                }
+              />
+            ))}
+          </div>
+        ))}
     </div>
   );
 }

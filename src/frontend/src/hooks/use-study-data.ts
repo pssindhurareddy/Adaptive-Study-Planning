@@ -1,21 +1,34 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { mockBackend } from "../../../../vendor/core-infrastructure/dist/mocks/backend.js";
 import {
+  addDependency,
   addSubject,
+  canRedo,
+  canUndo,
   deleteTask,
   endFocusSession,
+  getAchievements,
   getActiveSession,
   getAnalytics,
+  getBreaks,
+  getBurnout,
+  getCollisions,
   getDailySchedule,
   getDashboard,
+  getDependencyGraph,
   getPriorityQueue,
+  getProcrastinationDebt,
   getSubjectLeaderboard,
   getTaskStats,
   getUser,
   listSubjects,
   listTasks,
+  redoLastTaskChange,
+  removeDependency,
   removeSubject,
+  resolveCollision,
   startFocusSession,
+  undoLastTaskChange,
   updateTaskStatus,
   updateUser,
 } from "../lib/backend-client";
@@ -150,8 +163,6 @@ export function useEndFocus() {
   });
 }
 
-
-
 export function useUpdateTaskStatus() {
   const { actor } = useBackendActor();
   const qc = useQueryClient();
@@ -161,7 +172,11 @@ export function useUpdateTaskStatus() {
     onSuccess: (updatedTask) => {
       // Optimistically overwrite the matched task inline
       qc.setQueryData<{ id: number; status: string }[]>(["tasks"], (old) =>
-        old ? old.map((t) => (t.id === updatedTask.id ? { ...t, ...updatedTask } : t)) : [],
+        old
+          ? old.map((t) =>
+              t.id === updatedTask.id ? { ...t, ...updatedTask } : t,
+            )
+          : [],
       );
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
@@ -205,8 +220,17 @@ export function useUpdateUser() {
   const { actor } = useBackendActor();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ name, maxDailyHours, fatigueLevel, startTime }: { name: string; maxDailyHours: number; fatigueLevel: number; startTime: string }) =>
-      updateUser(actor, name, maxDailyHours, fatigueLevel, startTime),
+    mutationFn: ({
+      name,
+      maxDailyHours,
+      fatigueLevel,
+      startTime,
+    }: {
+      name: string;
+      maxDailyHours: number;
+      fatigueLevel: number;
+      startTime: string;
+    }) => updateUser(actor, name, maxDailyHours, fatigueLevel, startTime),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["user"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
@@ -229,5 +253,154 @@ export function useDeleteTask() {
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       qc.invalidateQueries({ queryKey: ["priorityQueue"] });
     },
+  });
+}
+
+// ── New feature hooks ─────────────────────────────────────────────────────────
+
+export function useBurnout() {
+  const { actor, isFetching } = useBackendActor();
+  return useQuery({
+    queryKey: ["burnout"],
+    queryFn: () => getBurnout(actor),
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useCollisions() {
+  const { actor, isFetching } = useBackendActor();
+  return useQuery({
+    queryKey: ["collisions"],
+    queryFn: () => getCollisions(actor),
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useResolveCollision() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      taskId,
+      shiftDays,
+    }: { taskId: number; shiftDays: number }) =>
+      resolveCollision(actor, taskId, shiftDays),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["collisions"] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["dailySchedule"] });
+      qc.invalidateQueries({ queryKey: ["priorityQueue"] });
+    },
+  });
+}
+
+export function useProcrastinationDebt() {
+  const { actor, isFetching } = useBackendActor();
+  return useQuery({
+    queryKey: ["procrastinationDebt"],
+    queryFn: () => getProcrastinationDebt(actor),
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useAchievements() {
+  const { actor, isFetching } = useBackendActor();
+  return useQuery({
+    queryKey: ["achievements"],
+    queryFn: () => getAchievements(actor),
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useBreaks() {
+  const { actor, isFetching } = useBackendActor();
+  return useQuery({
+    queryKey: ["breaks"],
+    queryFn: () => getBreaks(actor),
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useDependencyGraph() {
+  const { actor, isFetching } = useBackendActor();
+  return useQuery({
+    queryKey: ["dependencyGraph"],
+    queryFn: () => getDependencyGraph(actor),
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useAddDependency() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      taskId,
+      dependsOnId,
+    }: { taskId: number; dependsOnId: number }) =>
+      addDependency(actor, taskId, dependsOnId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["dependencyGraph"] });
+    },
+  });
+}
+
+export function useRemoveDependency() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      taskId,
+      dependsOnId,
+    }: { taskId: number; dependsOnId: number }) =>
+      removeDependency(actor, taskId, dependsOnId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["dependencyGraph"] });
+    },
+  });
+}
+
+export function useUndoTask() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => undoLastTaskChange(actor),
+    onSuccess: (restoredTasks) => {
+      qc.setQueryData(["tasks"], restoredTasks);
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["taskStats"] });
+      qc.invalidateQueries({ queryKey: ["collisions"] });
+      qc.invalidateQueries({ queryKey: ["procrastinationDebt"] });
+    },
+  });
+}
+
+export function useRedoTask() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => redoLastTaskChange(actor),
+    onSuccess: (restoredTasks) => {
+      qc.setQueryData(["tasks"], restoredTasks);
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["taskStats"] });
+      qc.invalidateQueries({ queryKey: ["collisions"] });
+      qc.invalidateQueries({ queryKey: ["procrastinationDebt"] });
+    },
+  });
+}
+
+export function useCanUndoRedo() {
+  const { actor, isFetching } = useBackendActor();
+  return useQuery({
+    queryKey: ["canUndoRedo"],
+    queryFn: async () => ({
+      canUndo: await canUndo(actor),
+      canRedo: await canRedo(actor),
+    }),
+    enabled: !!actor && !isFetching,
+    refetchInterval: 500,
   });
 }

@@ -5,8 +5,12 @@ export const mockBackend = (() => {
   let nextSubjectId = 4n;
   let nextTaskId = 5n;
   let activeSession = null;
+  let sessionStartedAt = null;
   let logs = [];
   let isSeeded = false;
+  let dependencies = []; // { taskId, dependsOnId }
+  let undoStack = []; // snapshots of tasks array
+  let redoStack = [];
   
   // Pre-populate demo data on load
   subjects = [
@@ -58,6 +62,10 @@ export const mockBackend = (() => {
     }
   ];
   
+  function snapshotTasks() {
+    return tasks.map(t => ({ ...t }));
+  }
+
   function getPriorityScore(task) {
     // Basic priority calculation demonstrating Java queue concepts
     let diffScore = task.difficulty === "High" || (task.difficulty && task.difficulty.High) ? 3 : task.difficulty === "Medium" || (task.difficulty && task.difficulty.Medium) ? 2 : 1;
@@ -138,6 +146,8 @@ export const mockBackend = (() => {
       if (tasks.some(t => t.subjectId === parsedSubjectId && t.title.toLowerCase() === title.toLowerCase())) {
         throw new Error(`Task "${title}" already exists for this subject.`);
       }
+      undoStack.push(snapshotTasks());
+      redoStack = [];
       let t = {
         id: nextTaskId++,
         subjectId: parsedSubjectId,
@@ -159,8 +169,41 @@ export const mockBackend = (() => {
       return t ? [t] : [];
     },
     deleteTask: async (taskId) => {
+      undoStack.push(snapshotTasks());
+      redoStack = [];
       tasks = tasks.filter(t => t.id !== BigInt(taskId));
       return true;
+    },
+    // ── Undo / Redo ─────────────────────────────────────────────────────────
+    undoLastTaskChange: async () => {
+      if (undoStack.length === 0) return [...tasks];
+      redoStack.push(snapshotTasks());
+      tasks = undoStack.pop();
+      return [...tasks];
+    },
+    redoLastTaskChange: async () => {
+      if (redoStack.length === 0) return [...tasks];
+      undoStack.push(snapshotTasks());
+      tasks = redoStack.pop();
+      return [...tasks];
+    },
+    canUndo: async () => undoStack.length > 0,
+    canRedo: async () => redoStack.length > 0,
+    // ── Dependency Graph ────────────────────────────────────────────────────
+    getDependencyGraph: async () => [...dependencies],
+    addDependency: async (taskId, dependsOnId) => {
+      let tId = BigInt(taskId);
+      let dId = BigInt(dependsOnId);
+      if (!dependencies.some(d => d.taskId === tId && d.dependsOnId === dId)) {
+        dependencies.push({ taskId: tId, dependsOnId: dId });
+      }
+      return [...dependencies];
+    },
+    removeDependency: async (taskId, dependsOnId) => {
+      let tId = BigInt(taskId);
+      let dId = BigInt(dependsOnId);
+      dependencies = dependencies.filter(d => !(d.taskId === tId && d.dependsOnId === dId));
+      return [...dependencies];
     },
     getPriorityQueue: async () => {
       let active = tasks.filter(t => getStatusString(t.status) !== "Completed");
@@ -245,11 +288,12 @@ export const mockBackend = (() => {
       };
     },
     getActiveSession: async () => {
-      return activeSession || null;
+      return activeSession ? { ...activeSession, startedAt: sessionStartedAt } : null;
     },
     startFocusSession: async (taskId) => {
       let parsedId = BigInt(taskId);
       let task = tasks.find(t => t.id === parsedId);
+      sessionStartedAt = Date.now();
       activeSession = { 
         isBreak: false, 
         taskId: parsedId, 
@@ -261,7 +305,7 @@ export const mockBackend = (() => {
       if (task) {
         task.status = "InProgress";
       }
-      return activeSession;
+      return { ...activeSession, startedAt: sessionStartedAt };
     },
     endFocusSession: async () => {
       if (!activeSession) return null;
@@ -269,6 +313,7 @@ export const mockBackend = (() => {
       let log = { completed: true, taskId: activeSession.taskId, actualTime: 25n };
       logs.push(log);
       activeSession = null;
+      sessionStartedAt = null;
       return log;
     },
     recordInterruption: async () => {
@@ -277,22 +322,26 @@ export const mockBackend = (() => {
     logProgress: async () => {
        return undefined;
     },
+    // ── Analytics (stable, not random) ──────────────────────────────────────
     getAnalytics: async () => {
+       // Use stable seeded scores instead of Math.random() so charts don't flicker
+       const stableScores = [72, 78, 81, 75, 88, 83, 90];
        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-       const history = days.map((day, idx) => ({
+       const history = days.map((_, idx) => ({
          date: `2026-04-${10+idx}`,
-         score: BigInt(70 + Math.floor(Math.random() * 20))
+         score: BigInt(stableScores[idx])
        }));
        
-       const performance = subjects.map(s => ({
+       const stableHours = [3, 2, 4, 3, 5, 2, 1];
+       const performance = subjects.map((s, si) => ({
          subjectName: s.name,
          completedTasks: BigInt(tasks.filter(t => t.subjectId === s.id && getStatusString(t.status) === 'Completed').length),
-         avgScore: BigInt(80 + Math.floor(Math.random() * 15))
+         avgScore: BigInt(78 + si * 5)
        }));
 
-       const weekly = days.map(day => ({
+       const weekly = days.map((day, idx) => ({
          day,
-         hours: BigInt(2 + Math.floor(Math.random() * 4))
+         hours: BigInt(stableHours[idx])
        }));
 
        return {
@@ -300,6 +349,101 @@ export const mockBackend = (() => {
          weeklyHours: weekly,
          focusScoreHistory: history
        };
+    },
+    // ── Burnout Detector ────────────────────────────────────────────────────
+    getBurnout: async () => {
+      let fatigue = Number(user.fatigueLevel);
+      let recentSessions = logs.length;
+      let completedCount = tasks.filter(t => getStatusString(t.status) === 'Completed').length;
+      // Score: higher fatigue + many sessions with few completions = burnout
+      let score = Math.min(100, fatigue * 10 + Math.max(0, recentSessions * 5 - completedCount * 8));
+      let level = score >= 65 ? 'High' : score >= 35 ? 'Medium' : 'Low';
+      let advice =
+        level === 'High' ? 'Take a long break — reschedule non-urgent tasks and rest today.' :
+        level === 'Medium' ? 'Consider a 15-min break between every two study blocks.' :
+        'You\'re doing great! Keep your current rhythm.';
+      return { level, score, advice };
+    },
+    // ── Exam Collision Detector ─────────────────────────────────────────────
+    getCollisions: async () => {
+      const MS_PER_DAY = 86400000;
+      let pending = tasks.filter(t => getStatusString(t.status) !== 'Completed' && t.deadline);
+      let collisions = [];
+      for (let i = 0; i < pending.length; i++) {
+        for (let j = i + 1; j < pending.length; j++) {
+          let a = pending[i], b = pending[j];
+          let da = new Date(a.deadline).getTime();
+          let db = new Date(b.deadline).getTime();
+          let diffDays = Math.abs(da - db) / MS_PER_DAY;
+          if (diffDays <= 1) {
+            let aHard = a.difficulty === 'High';
+            let bHard = b.difficulty === 'High';
+            let severity = (aHard && bHard) ? 'High' : (aHard || bHard) ? 'Medium' : 'Low';
+            let dateStr = new Date(a.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            let penaltyLabel = `${severity}-difficulty ${diffDays === 0 ? 'same-day' : '1-day'} collision on ${dateStr}`;
+            collisions.push({
+              taskId: a.id,
+              taskTitle: a.title,
+              conflictsWith: b.id,
+              conflictsWithTitle: b.title,
+              sharedDate: a.deadline,
+              severity,
+              penaltyLabel
+            });
+          }
+        }
+      }
+      return collisions;
+    },
+    resolveCollision: async (taskId, shiftDays) => {
+      let parsedId = BigInt(taskId);
+      let task = tasks.find(t => t.id === parsedId);
+      if (task && task.deadline) {
+        let d = new Date(task.deadline);
+        d.setDate(d.getDate() + Number(shiftDays));
+        task.deadline = d.toISOString().slice(0, 10);
+      }
+      return task || null;
+    },
+    // ── Procrastination Debt Tracker ────────────────────────────────────────
+    getProcrastinationDebt: async () => {
+      let now = Date.now();
+      let overdue = tasks.filter(t => {
+        if (getStatusString(t.status) === 'Completed') return false;
+        if (!t.deadline) return false;
+        return new Date(t.deadline).getTime() < now;
+      });
+      let debtScore = Math.min(100, overdue.length * 20);
+      return {
+        overdueCount: BigInt(overdue.length),
+        debtScore: BigInt(debtScore),
+        overdueTaskTitles: overdue.map(t => t.title)
+      };
+    },
+    // ── Achievements ────────────────────────────────────────────────────────
+    getAchievements: async () => {
+      let completed = tasks.filter(t => getStatusString(t.status) === 'Completed').length;
+      let totalTasks = tasks.length;
+      let hasSession = logs.length > 0;
+      return [
+        { id: 1n, title: 'First Step', description: 'Add your first task', icon: '🎯', earned: totalTasks >= 1 },
+        { id: 2n, title: 'Task Master', description: 'Complete 1 task', icon: '✅', earned: completed >= 1 },
+        { id: 3n, title: 'Focused', description: 'Complete a focus session', icon: '🔥', earned: hasSession },
+        { id: 4n, title: 'Scheduler', description: 'Have 3+ tasks scheduled', icon: '📅', earned: tasks.filter(t => getStatusString(t.status) === 'Scheduled').length >= 3 },
+        { id: 5n, title: 'Overachiever', description: 'Complete 3 tasks', icon: '🏆', earned: completed >= 3 },
+        { id: 6n, title: 'Multi-Subject', description: 'Study 2+ subjects', icon: '📚', earned: subjects.length >= 2 },
+        { id: 7n, title: 'Planner', description: 'Add 5+ tasks', icon: '📋', earned: totalTasks >= 5 },
+        { id: 8n, title: 'Streak Starter', description: 'Log 3+ sessions', icon: '🌟', earned: logs.length >= 3 },
+      ];
+    },
+    // ── Break Scheduler ─────────────────────────────────────────────────────
+    getBreaks: async () => {
+      let pending = tasks.filter(t => getStatusString(t.status) !== 'Completed');
+      return pending.slice(0, 5).map((t, i) => ({
+        afterTaskId: t.id,
+        breakType: (i + 1) % 4 === 0 ? 'Long' : 'Short',
+        durationMinutes: (i + 1) % 4 === 0 ? 15n : 5n
+      }));
     },
     seedDemoData: async () => {
       if (isSeeded) return;

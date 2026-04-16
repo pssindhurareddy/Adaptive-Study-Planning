@@ -353,7 +353,8 @@ export default function Analytics() {
   const focusHistory = useMemo(
     () =>
       (analyticsData?.focusScoreHistory ?? []).map((d) => ({
-        date: (d.date || "").length > 5 ? (d.date || "").slice(5) : (d.date || ""),
+        date:
+          (d.date || "").length > 5 ? (d.date || "").slice(5) : d.date || "",
         score: Number(d.score || 0),
       })),
     [analyticsData],
@@ -365,9 +366,18 @@ export default function Analytics() {
         name:
           (s.subjectName || "").length > 10
             ? `${(s.subjectName || "").slice(0, 9)}…`
-            : (s.subjectName || ""),
+            : s.subjectName || "",
         tasks: Number(s.completedTasks || 0),
         score: Number(s.avgScore || 0),
+      })),
+    [analyticsData],
+  );
+
+  const weeklyHoursData = useMemo(
+    () =>
+      (analyticsData?.weeklyHours ?? []).map((d) => ({
+        day: d.day || "",
+        hours: Number(d.hours || 0),
       })),
     [analyticsData],
   );
@@ -523,50 +533,65 @@ export default function Analytics() {
         isDark={isDark}
       >
         <div style={{ height: "240px" }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
-              data={focusHistory}
-              margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
+          {focusHistory.length === 0 ? (
+            <div
+              className="h-full flex items-center justify-center text-sm"
+              style={{ color: isDark ? dark.textMuted : "#9ca3af" }}
             >
-              <defs>
-                <linearGradient id="focusAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop
-                    offset="0%"
-                    stopColor="#3b82f6"
-                    stopOpacity={isDark ? 0.3 : 0.18}
-                  />
-                  <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid
-                stroke={gridColor}
-                strokeDasharray="3 3"
-                vertical={false}
-              />
-              <XAxis
-                dataKey="date"
-                tick={{ fill: axisColor, fontSize: 11 }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                domain={[0, 100]}
-                tick={{ fill: axisColor, fontSize: 11 }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <Tooltip content={makeChartTooltip(isDark)} />
-              <Area
-                type="monotone"
-                dataKey="score"
-                name="Focus Score"
-                stroke="#3b82f6"
-                strokeWidth={2}
-                fill="url(#focusAreaGrad)"
-                dot={{ fill: "#3b82f6", r: 3, strokeWidth: 0 }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+              No focus history yet — complete sessions to see trends.
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={focusHistory}
+                margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient
+                    id="focusAreaGrad"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop
+                      offset="0%"
+                      stopColor="#3b82f6"
+                      stopOpacity={isDark ? 0.3 : 0.18}
+                    />
+                    <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  stroke={gridColor}
+                  strokeDasharray="3 3"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fill: axisColor, fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  domain={[0, 100]}
+                  tick={{ fill: axisColor, fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip content={makeChartTooltip(isDark)} />
+                <Area
+                  type="monotone"
+                  dataKey="score"
+                  name="Focus Score"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  fill="url(#focusAreaGrad)"
+                  dot={{ fill: "#3b82f6", r: 3, strokeWidth: 0 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </div>
         <p
           className="mt-2 text-xs"
@@ -583,57 +608,132 @@ export default function Analytics() {
         isDark={isDark}
       >
         <div style={{ height: "240px" }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={subjectBarData}
-              margin={{ top: 20, right: 8, left: -16, bottom: 0 }}
+          {subjectBarData.length === 0 ? (
+            <div
+              className="h-full flex items-center justify-center text-sm"
+              style={{ color: isDark ? dark.textMuted : "#9ca3af" }}
             >
-              <CartesianGrid
-                stroke={gridColor}
-                strokeDasharray="3 3"
-                vertical={false}
-              />
-              <XAxis
-                dataKey="name"
-                tick={{ fill: axisColor, fontSize: 11 }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fill: axisColor, fontSize: 11 }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <Tooltip content={makeChartTooltip(isDark)} />
-              <Bar
-                dataKey="tasks"
-                name="Completed Tasks"
-                radius={[4, 4, 0, 0]}
-                maxBarSize={36}
+              No subjects yet — add subjects and complete tasks to see
+              performance.
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={subjectBarData}
+                margin={{ top: 20, right: 8, left: -16, bottom: 0 }}
               >
-                <LabelList
-                  dataKey="tasks"
-                  position="top"
-                  style={{
-                    fill: isDark ? dark.textSecondary : "#6b7280",
-                    fontSize: 11,
-                  }}
+                <CartesianGrid
+                  stroke={gridColor}
+                  strokeDasharray="3 3"
+                  vertical={false}
                 />
-                {subjectBarData.map((entry, idx) => (
-                  <Cell
-                    key={`cell-${entry.name}`}
-                    fill={BAR_COLORS[idx % BAR_COLORS.length]}
+                <XAxis
+                  dataKey="name"
+                  tick={{ fill: axisColor, fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fill: axisColor, fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip content={makeChartTooltip(isDark)} />
+                <Bar
+                  dataKey="tasks"
+                  name="Completed Tasks"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={36}
+                >
+                  <LabelList
+                    dataKey="tasks"
+                    position="top"
+                    style={{
+                      fill: isDark ? dark.textSecondary : "#6b7280",
+                      fontSize: 11,
+                    }}
                   />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+                  {subjectBarData.map((entry, idx) => (
+                    <Cell
+                      key={`cell-${entry.name}`}
+                      fill={BAR_COLORS[idx % BAR_COLORS.length]}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
         <p
           className="mt-2 text-xs"
           style={{ color: isDark ? dark.textMuted : "#9ca3af" }}
         >
           Completed tasks per subject
+        </p>
+      </SectionCard>
+
+      {/* Weekly Study Hours Chart */}
+      <SectionCard
+        title="Weekly Study Hours"
+        ocid="weekly-hours-chart"
+        isDark={isDark}
+      >
+        <div style={{ height: "200px" }}>
+          {weeklyHoursData.length === 0 ? (
+            <div
+              className="h-full flex items-center justify-center text-sm"
+              style={{ color: isDark ? dark.textMuted : "#9ca3af" }}
+            >
+              No study data yet — complete focus sessions to track hours.
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={weeklyHoursData}
+                margin={{ top: 16, right: 8, left: -16, bottom: 0 }}
+              >
+                <CartesianGrid
+                  stroke={gridColor}
+                  strokeDasharray="3 3"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="day"
+                  tick={{ fill: axisColor, fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fill: axisColor, fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip content={makeChartTooltip(isDark)} />
+                <Bar
+                  dataKey="hours"
+                  name="Hours"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={36}
+                  fill="#8b5cf6"
+                >
+                  <LabelList
+                    dataKey="hours"
+                    position="top"
+                    style={{
+                      fill: isDark ? dark.textSecondary : "#6b7280",
+                      fontSize: 11,
+                    }}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+        <p
+          className="mt-2 text-xs"
+          style={{ color: isDark ? dark.textMuted : "#9ca3af" }}
+        >
+          Study hours per day this week
         </p>
       </SectionCard>
 

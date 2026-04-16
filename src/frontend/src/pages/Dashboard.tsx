@@ -3,6 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
+  AlertTriangle,
   BookOpen,
   CalendarClock,
   CheckCircle2,
@@ -14,18 +15,23 @@ import {
   Zap,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  useAchievements,
   useActiveSession,
+  useBurnout,
+  useCollisions,
   useDailySchedule,
   useDashboard,
   useEndFocus,
   usePriorityQueue,
+  useProcrastinationDebt,
+  useResolveCollision,
   useStartFocus,
   useTaskStats,
   useTasks,
-  useUser,
   useUpdateUser,
+  useUser,
 } from "../hooks/use-study-data";
 import { TaskDifficulty, TaskStatus } from "../types/study";
 
@@ -258,6 +264,385 @@ function TaskStatBox({
   );
 }
 
+// ── Live countdown hook ───────────────────────────────────────────────────────
+
+function useCountdown(
+  startedAt: number | null,
+  durationMinutes: number,
+): string {
+  const [remaining, setRemaining] = useState<number>(durationMinutes * 60);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (startedAt === null) {
+      setRemaining(durationMinutes * 60);
+      return;
+    }
+    function tick() {
+      const elapsed = Math.floor((Date.now() - startedAt!) / 1000);
+      const rem = Math.max(0, durationMinutes * 60 - elapsed);
+      setRemaining(rem);
+    }
+    tick();
+    intervalRef.current = setInterval(tick, 1000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [startedAt, durationMinutes]);
+
+  const mins = Math.floor(remaining / 60);
+  const secs = remaining % 60;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
+// ── Burnout Detector Widget ───────────────────────────────────────────────────
+
+function BurnoutWidget({ isDark }: { isDark: boolean }) {
+  const { data: burnout } = useBurnout();
+  const levelColor =
+    burnout?.level === "High"
+      ? "#ef4444"
+      : burnout?.level === "Medium"
+        ? "#f59e0b"
+        : "#22c55e";
+  const levelBg =
+    burnout?.level === "High"
+      ? isDark
+        ? "#3d1515"
+        : "#fef2f2"
+      : burnout?.level === "Medium"
+        ? isDark
+          ? "#3d2b00"
+          : "#fffbeb"
+        : isDark
+          ? "#1a3d2b"
+          : "#f0fdf4";
+
+  return (
+    <div
+      className="rounded-lg p-5 flex flex-col gap-3"
+      style={{
+        background: isDark ? "#1e2128" : "#ffffff",
+        border: `1px solid ${isDark ? "#2d3748" : "#e5e7eb"}`,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+      }}
+      data-ocid="burnout-widget"
+    >
+      <div className="flex items-center gap-2 mb-1">
+        <AlertTriangle size={15} style={{ color: levelColor }} />
+        <h3
+          className="font-semibold text-sm"
+          style={{ color: isDark ? "#f1f5f9" : "#111827" }}
+        >
+          Burnout Detector
+        </h3>
+        {burnout && (
+          <span
+            className="ml-auto text-xs px-2 py-0.5 rounded font-semibold"
+            style={{ background: levelBg, color: levelColor }}
+          >
+            {burnout.level}
+          </span>
+        )}
+      </div>
+      {burnout ? (
+        <>
+          <div className="flex items-center gap-3">
+            <div
+              className="flex-1 h-2 rounded-full overflow-hidden"
+              style={{ background: isDark ? "#2d3748" : "#f3f4f6" }}
+            >
+              <div
+                className="h-full rounded-full transition-all"
+                style={{ width: `${burnout.score}%`, background: levelColor }}
+              />
+            </div>
+            <span
+              className="text-xs font-mono font-semibold w-8 text-right"
+              style={{ color: levelColor }}
+            >
+              {burnout.score}%
+            </span>
+          </div>
+          <p
+            className="text-xs"
+            style={{ color: isDark ? "#94a3b8" : "#6b7280" }}
+          >
+            {burnout.advice}
+          </p>
+        </>
+      ) : (
+        <Skeleton className="h-6 w-full" />
+      )}
+    </div>
+  );
+}
+
+// ── Procrastination Debt Widget ───────────────────────────────────────────────
+
+function ProcrastinationDebtWidget({ isDark }: { isDark: boolean }) {
+  const { data: debt } = useProcrastinationDebt();
+  const overdueCount = Number(debt?.overdueCount ?? 0);
+  const debtScore = Number(debt?.debtScore ?? 0);
+  const badgeColor = overdueCount > 0 ? "#ef4444" : "#22c55e";
+
+  return (
+    <div
+      className="rounded-lg p-5 flex flex-col gap-3"
+      style={{
+        background: isDark ? "#1e2128" : "#ffffff",
+        border: `1px solid ${isDark ? "#2d3748" : "#e5e7eb"}`,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+      }}
+      data-ocid="procrastination-debt-widget"
+    >
+      <div className="flex items-center gap-2 mb-1">
+        <AlertCircle size={15} style={{ color: badgeColor }} />
+        <h3
+          className="font-semibold text-sm"
+          style={{ color: isDark ? "#f1f5f9" : "#111827" }}
+        >
+          Procrastination Debt
+        </h3>
+        <span
+          className="ml-auto text-xs px-2 py-0.5 rounded font-semibold"
+          style={{
+            background:
+              overdueCount > 0
+                ? isDark
+                  ? "#3d1515"
+                  : "#fef2f2"
+                : isDark
+                  ? "#1a3d2b"
+                  : "#f0fdf4",
+            color: badgeColor,
+          }}
+        >
+          {overdueCount} overdue
+        </span>
+      </div>
+      {debt ? (
+        <>
+          <div className="flex items-center gap-3">
+            <div
+              className="flex-1 h-2 rounded-full overflow-hidden"
+              style={{ background: isDark ? "#2d3748" : "#f3f4f6" }}
+            >
+              <div
+                className="h-full rounded-full transition-all"
+                style={{ width: `${debtScore}%`, background: badgeColor }}
+              />
+            </div>
+            <span
+              className="text-xs font-mono font-semibold w-10 text-right"
+              style={{ color: badgeColor }}
+            >
+              {debtScore}pts
+            </span>
+          </div>
+          {overdueCount > 0 ? (
+            <ul className="flex flex-col gap-1">
+              {(debt.overdueTaskTitles ?? [])
+                .slice(0, 3)
+                .map((title: string) => (
+                  <li
+                    key={title}
+                    className="text-xs flex items-center gap-1.5"
+                    style={{ color: isDark ? "#94a3b8" : "#6b7280" }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
+                    {title}
+                  </li>
+                ))}
+              {overdueCount > 3 && (
+                <li
+                  className="text-xs"
+                  style={{ color: isDark ? "#64748b" : "#9ca3af" }}
+                >
+                  +{overdueCount - 3} more overdue…
+                </li>
+              )}
+            </ul>
+          ) : (
+            <p
+              className="text-xs"
+              style={{ color: isDark ? "#94a3b8" : "#6b7280" }}
+            >
+              No overdue tasks — keep it up! 🎉
+            </p>
+          )}
+        </>
+      ) : (
+        <Skeleton className="h-6 w-full" />
+      )}
+    </div>
+  );
+}
+
+// ── Exam Collision Widget ─────────────────────────────────────────────────────
+
+function CollisionWidget({ isDark }: { isDark: boolean }) {
+  const { data: collisions = [] } = useCollisions();
+  const resolveCollision = useResolveCollision();
+
+  return (
+    <div
+      className="rounded-lg p-5 flex flex-col gap-3"
+      style={{
+        background: isDark ? "#1e2128" : "#ffffff",
+        border: `1px solid ${isDark ? "#2d3748" : "#e5e7eb"}`,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+      }}
+      data-ocid="collision-widget"
+    >
+      <div className="flex items-center gap-2 mb-1">
+        <CalendarClock
+          size={15}
+          style={{ color: collisions.length > 0 ? "#f59e0b" : "#22c55e" }}
+        />
+        <h3
+          className="font-semibold text-sm"
+          style={{ color: isDark ? "#f1f5f9" : "#111827" }}
+        >
+          Exam Collision Detector
+        </h3>
+        <span
+          className="ml-auto text-xs px-2 py-0.5 rounded font-semibold"
+          style={{
+            background:
+              collisions.length > 0
+                ? isDark
+                  ? "#3d2b00"
+                  : "#fffbeb"
+                : isDark
+                  ? "#1a3d2b"
+                  : "#f0fdf4",
+            color: collisions.length > 0 ? "#f59e0b" : "#22c55e",
+          }}
+        >
+          {collisions.length} conflict{collisions.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+      {collisions.length === 0 ? (
+        <p
+          className="text-xs"
+          style={{ color: isDark ? "#94a3b8" : "#6b7280" }}
+        >
+          No scheduling conflicts detected. 👍
+        </p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {collisions.map((c) => (
+            <div
+              key={`${c.taskId}-${c.conflictsWith}`}
+              className="rounded-md px-3 py-2.5 flex flex-col gap-1.5"
+              style={{
+                background: isDark ? "#252830" : "#f9fafb",
+                border: `1px solid ${isDark ? "#2d3748" : "#e5e7eb"}`,
+              }}
+            >
+              <p
+                className="text-xs font-semibold"
+                style={{ color: isDark ? "#fcd34d" : "#92400e" }}
+              >
+                {c.taskTitle} ↔ {c.conflictsWithTitle}
+              </p>
+              <p
+                className="text-xs"
+                style={{ color: isDark ? "#64748b" : "#9ca3af" }}
+              >
+                {c.penaltyLabel}
+              </p>
+              <button
+                type="button"
+                disabled={resolveCollision.isPending}
+                onClick={() =>
+                  resolveCollision.mutate({
+                    taskId: Number(c.taskId),
+                    shiftDays: 1,
+                  })
+                }
+                className="self-start mt-0.5 text-xs px-2.5 py-1 rounded font-medium disabled:opacity-50 transition-colors"
+                style={{ background: "#4f46e5", color: "#fff", border: "none" }}
+                data-ocid="resolve-collision-btn"
+              >
+                Resolve (shift +1 day)
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Achievements Strip ────────────────────────────────────────────────────────
+
+function AchievementsStrip({ isDark }: { isDark: boolean }) {
+  const { data: achievements = [] } = useAchievements();
+  const earned = achievements.filter((a) => a.earned);
+
+  return (
+    <div
+      className="rounded-lg p-5"
+      style={{
+        background: isDark ? "#1e2128" : "#ffffff",
+        border: `1px solid ${isDark ? "#2d3748" : "#e5e7eb"}`,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+      }}
+      data-ocid="achievements-section"
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <span>🏅</span>
+        <h3
+          className="font-semibold text-sm"
+          style={{ color: isDark ? "#f1f5f9" : "#111827" }}
+        >
+          Achievements
+        </h3>
+        <span
+          className="ml-auto text-xs px-2 py-0.5 rounded"
+          style={{
+            background: isDark ? "#1e3a5f" : "#e0e7ff",
+            color: isDark ? "#93c5fd" : "#4338ca",
+          }}
+        >
+          {earned.length}/{achievements.length} earned
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {achievements.map((a) => (
+          <div
+            key={Number(a.id)}
+            title={a.description}
+            className="flex flex-col items-center gap-0.5 rounded-lg px-3 py-2 text-center transition-all"
+            style={{
+              background: a.earned
+                ? isDark
+                  ? "#1a3d2b"
+                  : "#f0fdf4"
+                : isDark
+                  ? "#252830"
+                  : "#f9fafb",
+              border: `1px solid ${a.earned ? (isDark ? "#1e4d30" : "#bbf7d0") : isDark ? "#2d3748" : "#e5e7eb"}`,
+              opacity: a.earned ? 1 : 0.5,
+              minWidth: "68px",
+            }}
+          >
+            <span style={{ fontSize: "1.4rem" }}>{a.icon}</span>
+            <span
+              className="text-xs font-medium mt-0.5"
+              style={{ color: isDark ? "#f1f5f9" : "#111827" }}
+            >
+              {a.title}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 
 function DashSkeleton() {
@@ -286,13 +671,22 @@ export default function Dashboard() {
 
   const { data: dashboard, isLoading } = useDashboard();
   const { data: tasks = [] } = useTasks();
-  const { data: schedule = [], refetch: refetchSchedule } = useDailySchedule();
+  const { data: schedule = [] } = useDailySchedule();
   const { data: priorityQueue = [] } = usePriorityQueue();
   const { data: taskStats } = useTaskStats();
   const { data: activeSession } = useActiveSession();
   const startFocus = useStartFocus();
   const endFocus = useEndFocus();
   const qc = useQueryClient();
+
+  // Live countdown timer for active session
+  const sessionStartedAt: number | null =
+    activeSession &&
+    (activeSession as unknown as { startedAt?: number }).startedAt
+      ? (activeSession as unknown as { startedAt: number }).startedAt
+      : null;
+  const sessionDuration = Number(activeSession?.durationMinutes ?? 25);
+  const countdown = useCountdown(sessionStartedAt, sessionDuration);
 
   const scheduledTasks = useMemo(
     () => tasks.filter((t) => t.status === TaskStatus.Scheduled),
@@ -304,7 +698,7 @@ export default function Dashboard() {
     [priorityQueue],
   );
 
-  const completedTasks = useMemo(
+  const _completedTasks = useMemo(
     () => tasks.filter((t) => t.status === TaskStatus.Completed),
     [tasks],
   );
@@ -316,7 +710,7 @@ export default function Dashboard() {
 
   const focusScore = Number(dashboard?.focusScore ?? 0);
   const studyStreak = Number(dashboard?.studyStreak ?? 0);
-  const dailyProgress = Number(dashboard?.dailyProgress ?? 0);
+  const _dailyProgress = Number(dashboard?.dailyProgress ?? 0);
   const totalTasks = Number(dashboard?.totalTasks ?? 0);
   const stabilityScore = Number(dashboard?.stabilityScore ?? 0);
 
@@ -333,8 +727,6 @@ export default function Dashboard() {
     month: "long",
     day: "numeric",
   });
-
-
 
   const handleRefreshSchedule = () => {
     qc.invalidateQueries({ queryKey: ["dailySchedule"] });
@@ -395,34 +787,53 @@ export default function Dashboard() {
       >
         <Clock size={16} color={isDark ? "#60a5fa" : "#2563eb"} />
         <div className="flex-1">
-          <p className="text-xs font-semibold" style={{ color: isDark ? dark.textSecondary : "#374151" }}>
+          <p
+            className="text-xs font-semibold"
+            style={{ color: isDark ? dark.textSecondary : "#374151" }}
+          >
             Schedule Start Preference
           </p>
-          <p className="text-[11px]" style={{ color: isDark ? dark.textMuted : "#6b7280" }}>
+          <p
+            className="text-[11px]"
+            style={{ color: isDark ? dark.textMuted : "#6b7280" }}
+          >
             Set when your daily study blocks begin
           </p>
         </div>
         <input
           type="time"
-          value={userData?.startTime ? (userData.startTime.includes('AM') || userData.startTime.includes('PM') ? "08:00" : userData.startTime) : "08:00"}
+          value={
+            userData?.startTime
+              ? userData.startTime.includes("AM") ||
+                userData.startTime.includes("PM")
+                ? "08:00"
+                : userData.startTime
+              : "08:00"
+          }
           onChange={(e) => {
             const newTime = e.target.value;
             // Optimistic update
-            qc.setQueryData(["user"], (old: any) => ({ ...old, startTime: newTime }));
-            
+            qc.setQueryData(["user"], (old: any) => ({
+              ...old,
+              startTime: newTime,
+            }));
+
             if (userData) {
-              updateUser.mutate({
-                name: userData.name || "Student",
-                maxDailyHours: userData.maxDailyHours || 8,
-                fatigueLevel: userData.fatigueLevel || 0,
-                startTime: newTime
-              }, {
-                onSuccess: () => {
-                  // Force immediate refresh of schedule dependencies
-                  qc.invalidateQueries({ queryKey: ["dailySchedule"] });
-                  qc.invalidateQueries({ queryKey: ["user"] });
-                }
-              });
+              updateUser.mutate(
+                {
+                  name: userData.name || "Student",
+                  maxDailyHours: userData.maxDailyHours || 8,
+                  fatigueLevel: userData.fatigueLevel || 0,
+                  startTime: newTime,
+                },
+                {
+                  onSuccess: () => {
+                    // Force immediate refresh of schedule dependencies
+                    qc.invalidateQueries({ queryKey: ["dailySchedule"] });
+                    qc.invalidateQueries({ queryKey: ["user"] });
+                  },
+                },
+              );
             }
           }}
           className="bg-transparent border rounded px-2 py-1 text-sm outline-none"
@@ -487,7 +898,8 @@ export default function Dashboard() {
                   className="text-xs font-medium"
                   style={{ color: isDark ? "#93c5fd" : "#1d4ed8" }}
                 >
-                  {activeSession.isBreak ? "Break" : "Focus Session"} · Session #{activeSession.sessionNumber}
+                  {activeSession.isBreak ? "Break" : "Focus Session"} · Session
+                  #{activeSession.sessionNumber}
                 </p>
                 <p
                   className="font-semibold text-sm mt-0.5"
@@ -498,11 +910,10 @@ export default function Dashboard() {
               </div>
               <div className="flex items-center gap-1 px-3 py-1.5 rounded text-sm font-semibold text-blue-400">
                 <Clock size={14} />
-                <span>25 min</span>
+                <span>{countdown}</span>
               </div>
             </div>
             <div className="flex items-center gap-2">
-
               <button
                 type="button"
                 onClick={() => endFocus.mutate()}
@@ -768,113 +1179,121 @@ export default function Dashboard() {
 
       {/* ── BOTTOM ROW: Quick Start Focus ─────────────────────────────────── */}
       <div
-          className="rounded-lg p-5"
-          style={cardStyle}
-          data-ocid="quick-start-section"
-        >
-          <SectionHeader
-            icon={<Zap size={16} />}
-            title="Quick Start Focus"
-            isDark={isDark}
-          />
+        className="rounded-lg p-5"
+        style={cardStyle}
+        data-ocid="quick-start-section"
+      >
+        <SectionHeader
+          icon={<Zap size={16} />}
+          title="Quick Start Focus"
+          isDark={isDark}
+        />
 
-          {scheduledTasks.length === 0 ? (
-            <div
-              className="text-center py-8 rounded-md"
-              style={emptyStateStyle}
-              data-ocid="quick-start-empty"
+        {scheduledTasks.length === 0 ? (
+          <div
+            className="text-center py-8 rounded-md"
+            style={emptyStateStyle}
+            data-ocid="quick-start-empty"
+          >
+            <BookOpen
+              size={24}
+              style={{
+                color: isDark ? dark.textMuted : "#9ca3af",
+                margin: "0 auto 6px",
+              }}
+            />
+            <p
+              style={{
+                fontSize: "13px",
+                color: isDark ? dark.textSecondary : "#6b7280",
+              }}
             >
-              <BookOpen
-                size={24}
-                style={{
-                  color: isDark ? dark.textMuted : "#9ca3af",
-                  margin: "0 auto 6px",
-                }}
-              />
-              <p
-                style={{
-                  fontSize: "13px",
-                  color: isDark ? dark.textSecondary : "#6b7280",
-                }}
+              No scheduled tasks ready to start
+            </p>
+            <p
+              style={{
+                fontSize: "12px",
+                color: isDark ? dark.textMuted : "#9ca3af",
+                marginTop: "4px",
+              }}
+            >
+              Add tasks on the Tasks page and schedule them
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {scheduledTasks.slice(0, 4).map((task) => (
+              <div
+                key={task.id}
+                className="flex items-center justify-between rounded-md px-4 py-3"
+                style={rowStyle}
+                data-ocid="quick-start-row"
               >
-                No scheduled tasks ready to start
-              </p>
+                <div className="min-w-0 flex-1">
+                  <p
+                    className="font-medium truncate"
+                    style={{
+                      fontSize: "13px",
+                      color: isDark ? dark.textPrimary : "#111827",
+                    }}
+                  >
+                    {task.title}
+                  </p>
+                  <p
+                    style={{
+                      fontSize: "11px",
+                      color: isDark ? dark.textMuted : "#6b7280",
+                    }}
+                  >
+                    {task.subjectName} · {task.estimatedMinutes}m ·{" "}
+                    <span>due {task.deadline}</span>
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                  <DiffBadge diff={task.difficulty} isDark={isDark} />
+                  <button
+                    type="button"
+                    onClick={() => startFocus.mutate(task.id)}
+                    disabled={startFocus.isPending}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium disabled:opacity-50"
+                    style={{
+                      background: "#4f46e5",
+                      color: "#ffffff",
+                      border: "none",
+                    }}
+                    data-ocid="start-focus-btn"
+                  >
+                    <Clock size={12} />
+                    Start
+                  </button>
+                </div>
+              </div>
+            ))}
+            {scheduledTasks.length > 4 && (
               <p
                 style={{
                   fontSize: "12px",
                   color: isDark ? dark.textMuted : "#9ca3af",
-                  marginTop: "4px",
+                  textAlign: "center",
+                  paddingTop: "4px",
                 }}
               >
-                Add tasks on the Tasks page and schedule them
+                +{scheduledTasks.length - 4} more tasks on the Tasks page
               </p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {scheduledTasks.slice(0, 4).map((task) => (
-                <div
-                  key={task.id}
-                  className="flex items-center justify-between rounded-md px-4 py-3"
-                  style={rowStyle}
-                  data-ocid="quick-start-row"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className="font-medium truncate"
-                      style={{
-                        fontSize: "13px",
-                        color: isDark ? dark.textPrimary : "#111827",
-                      }}
-                    >
-                      {task.title}
-                    </p>
-                    <p
-                      style={{
-                        fontSize: "11px",
-                        color: isDark ? dark.textMuted : "#6b7280",
-                      }}
-                    >
-                      {task.subjectName} · {task.estimatedMinutes}m ·{" "}
-                      <span>due {task.deadline}</span>
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 ml-3 flex-shrink-0">
-                    <DiffBadge diff={task.difficulty} isDark={isDark} />
-                    <button
-                      type="button"
-                      onClick={() => startFocus.mutate(task.id)}
-                      disabled={startFocus.isPending}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium disabled:opacity-50"
-                      style={{
-                        background: "#4f46e5",
-                        color: "#ffffff",
-                        border: "none",
-                      }}
-                      data-ocid="start-focus-btn"
-                    >
-                      <Clock size={12} />
-                      Start
-                    </button>
-                  </div>
-                </div>
-              ))}
-              {scheduledTasks.length > 4 && (
-                <p
-                  style={{
-                    fontSize: "12px",
-                    color: isDark ? dark.textMuted : "#9ca3af",
-                    textAlign: "center",
-                    paddingTop: "4px",
-                  }}
-                >
-                  +{scheduledTasks.length - 4} more tasks on the Tasks page
-                </p>
-              )}
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
+      </div>
 
+      {/* ── Insights Row: Burnout / Debt / Collision ──────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <BurnoutWidget isDark={isDark} />
+        <ProcrastinationDebtWidget isDark={isDark} />
+        <CollisionWidget isDark={isDark} />
+      </div>
 
+      {/* ── Achievements ─────────────────────────────────────────────────── */}
+      <AchievementsStrip isDark={isDark} />
     </div>
   );
 }
