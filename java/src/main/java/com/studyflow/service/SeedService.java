@@ -26,11 +26,8 @@ public class SeedService {
 
     /**
      * Seed demo data — idempotent (runs only once).
-     * Java equivalent:
-     *   users.add(new User("Alex Chen", 8, 3))
-     *   subjects.add(new Subject(id, "Mathematics", 8))
-     *   ...
-     *   tasks.add(new TaskUnit(tid++, mathId, "Calculus Chapter 5 Review", HIGH, 90, "2026-04-15", SCHEDULED))
+     * Adds richer progress logs so analytics charts (focus score history,
+     * subject performance, weekly hours) have meaningful data to display.
      */
     public void seedDemoData() {
         if (store.isSeeded() || !store.getUsers().isEmpty()) return;
@@ -49,50 +46,69 @@ public class SeedService {
         store.getSubjects().add(new Subject(csId, "Computer Science", 9));
         store.getSubjects().add(new Subject(litId, "Literature", 5));
 
-        // Bump the nextSubjectId to reflect what was used
-        while (store.getNextSubjectId() < sid) {
-            store.incrementSubjectId();
-        }
+        while (store.getNextSubjectId() < sid) store.incrementSubjectId();
 
         int tid = store.getNextTaskId();
 
-        // Java equivalent: tasks.add(new TaskUnit(tid++, mathId, "Calculus Chapter 5 Review", HIGH, 90, "2026-04-15", SCHEDULED))
+        // ── Tasks ────────────────────────────────────────────────────────────
+
         int calcId = tid++;
         store.getTasks().add(new TaskUnit(calcId, mathId, "Calculus Chapter 5 Review",
-                TaskDifficulty.High, 90, "2026-04-15", TaskStatus.Scheduled));
+                TaskDifficulty.High, 90, "2026-04-20", TaskStatus.Scheduled));
 
         int newtonId = tid++;
         store.getTasks().add(new TaskUnit(newtonId, physicsId, "Newton's Laws Problem Set",
-                TaskDifficulty.Medium, 60, "2026-04-14", TaskStatus.InProgress));
+                TaskDifficulty.Medium, 60, "2026-04-21", TaskStatus.InProgress));
 
-        store.getTasks().add(new TaskUnit(tid++, csId, "Data Structures Assignment",
-                TaskDifficulty.High, 120, "2026-04-13", TaskStatus.Scheduled));
+        int dsId = tid++;
+        store.getTasks().add(new TaskUnit(dsId, csId, "Data Structures Assignment",
+                TaskDifficulty.High, 120, "2026-04-22", TaskStatus.Scheduled));
 
-        store.getTasks().add(new TaskUnit(tid++, litId, "Essay Outline",
-                TaskDifficulty.Low, 45, "2026-04-16", TaskStatus.Scheduled));
+        int essayId = tid++;
+        store.getTasks().add(new TaskUnit(essayId, litId, "Essay Outline",
+                TaskDifficulty.Low, 45, "2026-04-23", TaskStatus.Completed));
 
-        store.getTasks().add(new TaskUnit(tid++, mathId, "Linear Algebra Quiz Prep",
-                TaskDifficulty.Medium, 60, "2026-04-17", TaskStatus.Scheduled));
+        int linAlgId = tid++;
+        store.getTasks().add(new TaskUnit(linAlgId, mathId, "Linear Algebra Quiz Prep",
+                TaskDifficulty.Medium, 60, "2026-04-24", TaskStatus.Completed));
 
-        store.getTasks().add(new TaskUnit(tid++, physicsId, "Thermodynamics Notes",
-                TaskDifficulty.High, 90, "2026-04-18", TaskStatus.Scheduled));
+        int thermoId = tid++;
+        store.getTasks().add(new TaskUnit(thermoId, physicsId, "Thermodynamics Notes",
+                TaskDifficulty.High, 90, "2026-04-25", TaskStatus.Scheduled));
 
-        store.getTasks().add(new TaskUnit(tid++, csId, "Binary Trees Practice",
-                TaskDifficulty.Medium, 75, "2026-04-15", TaskStatus.Scheduled));
+        int btId = tid++;
+        store.getTasks().add(new TaskUnit(btId, csId, "Binary Trees Practice",
+                TaskDifficulty.Medium, 75, "2026-04-26", TaskStatus.Completed));
 
         int poetryId = tid++;
         store.getTasks().add(new TaskUnit(poetryId, litId, "Poetry Analysis",
-                TaskDifficulty.Low, 30, "2026-04-19", TaskStatus.Completed));
+                TaskDifficulty.Low, 30, "2026-04-27", TaskStatus.Completed));
 
-        // Progress logs — Java equivalent: logs.add(new ProgressLog(taskId, completed, actualTime, interruptions))
-        store.getLogs().add(new ProgressLog(poetryId, true, 28, 1));
-        store.getLogs().add(new ProgressLog(newtonId, false, 45, 2));
-        store.getLogs().add(new ProgressLog(calcId, false, 30, 3));
+        int algoId = tid++;
+        store.getTasks().add(new TaskUnit(algoId, csId, "Algorithms Mid-term Review",
+                TaskDifficulty.High, 120, "2026-04-28", TaskStatus.Scheduled));
 
-        // Sync nextTaskId
-        while (store.getNextTaskId() < tid) {
-            store.incrementTaskId();
-        }
+        int wavesId = tid++;
+        store.getTasks().add(new TaskUnit(wavesId, physicsId, "Wave Mechanics Problems",
+                TaskDifficulty.Medium, 50, "2026-04-29", TaskStatus.Scheduled));
+
+        while (store.getNextTaskId() < tid) store.incrementTaskId();
+
+        // ── Progress logs (7 entries → one per day, feeds weekly hours chart) ─
+
+        // Completed tasks: essay, linAlg, binaryTrees, poetry
+        store.getLogs().add(new ProgressLog(essayId,  true,  42, 0));  // Mon
+        store.getLogs().add(new ProgressLog(linAlgId, true,  65, 1));  // Tue
+        store.getLogs().add(new ProgressLog(btId,     true,  80, 0));  // Wed
+        store.getLogs().add(new ProgressLog(poetryId, true,  28, 1));  // Thu
+
+        // In-progress / partial logs for analytics variety
+        store.getLogs().add(new ProgressLog(newtonId,  false, 45, 2)); // Fri
+        store.getLogs().add(new ProgressLog(calcId,    false, 30, 3)); // Sat
+        store.getLogs().add(new ProgressLog(thermoId,  false, 60, 1)); // Sun
+
+        // Seed one dependency: Data Structures depends on Binary Trees
+        store.getDependencies().add(new TaskDependency(dsId, btId));
 
         store.setSeeded(true);
     }

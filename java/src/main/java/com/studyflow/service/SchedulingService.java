@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
-
 /**
  * SchedulingService — generates the daily study schedule and priority queue.
  * Java equivalent: class SchedulingService { public List<ScheduledBlock> generateDailySchedule() }
@@ -155,6 +154,58 @@ public class SchedulingService {
         int completedCount = (int) store.getTasks().stream()
                 .filter(t -> t.getStatus() == TaskStatus.Completed).count();
         return new TaskStats(scheduledCount, inProgressCount, completedCount);
+    }
+
+    /**
+     * Generate scheduled break blocks interleaved with study sessions.
+     * Follows the Pomodoro pattern: study 25–30 min → short break 5 min,
+     * every 4th session → long break 15 min.
+     *
+     * Returns break slots for the day based on the study schedule.
+     */
+    public List<BreakBlock> getScheduledBreaks() {
+        // Break slots follow study slots: study at 9am → break at 10am, etc.
+        List<BreakBlock> breaks = new ArrayList<>();
+        List<ScheduledBlock> schedule = getDailySchedule();
+
+        for (int i = 0; i < schedule.size(); i++) {
+            // Every 4th session gets a long break, others get a short break
+            boolean longBreak = (i + 1) % 4 == 0;
+            int duration = longBreak ? 15 : 5;
+            String type = longBreak ? "long" : "short";
+            // Compute break start time: study slot time + estimated minutes
+            ScheduledBlock block = schedule.get(i);
+            String breakSlot = computeBreakSlot(block.getTimeSlot(), block.getEstimatedMinutes());
+            breaks.add(new BreakBlock(breakSlot, duration, type));
+        }
+        return breaks;
+    }
+
+    /**
+     * Compute the break start time given a study slot time and its duration in minutes.
+     * Example: "9:00 AM" + 60 min → "10:00 AM"
+     */
+    private String computeBreakSlot(String timeSlot, int studyMinutes) {
+        try {
+            // Parse "H:MM AM/PM" format
+            String[] parts = timeSlot.split("[: ]");
+            int hour = Integer.parseInt(parts[0]);
+            int minute = Integer.parseInt(parts[1]);
+            boolean pm = "PM".equalsIgnoreCase(parts[2]);
+            if (pm && hour != 12) hour += 12;
+            if (!pm && hour == 12) hour = 0;
+
+            int totalMinutes = hour * 60 + minute + studyMinutes;
+            int endHour = (totalMinutes / 60) % 24;
+            int endMinute = totalMinutes % 60;
+
+            String ampm = endHour >= 12 ? "PM" : "AM";
+            int displayHour = endHour % 12;
+            if (displayHour == 0) displayHour = 12;
+            return String.format("%d:%02d %s", displayHour, endMinute, ampm);
+        } catch (Exception e) {
+            return timeSlot; // Fallback: return original slot
+        }
     }
 
     /**

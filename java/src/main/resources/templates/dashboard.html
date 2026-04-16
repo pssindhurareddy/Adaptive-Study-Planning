@@ -11,13 +11,13 @@
 <div class="page-header">
   <div>
     <h1 class="page-title">Dashboard</h1>
-    <p class="page-subtitle">Track your focus, progress, and study schedule</p>
+    <p class="page-subtitle" id="today-date">Track your focus, progress, and study schedule</p>
   </div>
 </div>
 
 <div class="page-body">
 
-  <!-- Active session banner -->
+  <!-- Active session banner with live countdown -->
   <div id="session-banner" class="hidden"></div>
 
   <!-- Metric cards -->
@@ -59,6 +59,27 @@
     </div>
   </div>
 
+  <!-- Burnout + Procrastination Debt + Collisions row -->
+  <div class="grid-3 section" id="insights-row">
+    <!-- Burnout Detector -->
+    <div class="card" id="burnout-card">
+      <div class="card-title">🧠 Burnout Detector</div>
+      <div id="burnout-content"><div class="spinner" style="margin:20px auto;display:block"></div></div>
+    </div>
+
+    <!-- Procrastination Debt Tracker -->
+    <div class="card" id="debt-card">
+      <div class="card-title">⏳ Procrastination Debt</div>
+      <div id="debt-content"><div class="spinner" style="margin:20px auto;display:block"></div></div>
+    </div>
+
+    <!-- Exam Collision Detector -->
+    <div class="card" id="collision-card">
+      <div class="card-title">⚠️ Exam Collision Detector</div>
+      <div id="collision-content"><div class="spinner" style="margin:20px auto;display:block"></div></div>
+    </div>
+  </div>
+
   <!-- Today's schedule + Priority Queue -->
   <div class="grid-2">
 
@@ -78,6 +99,15 @@
       <div id="priority-queue"></div>
     </div>
 
+  </div>
+
+  <!-- Achievements strip -->
+  <div class="section">
+    <div class="section-header">
+      <h2 class="section-title">🏅 Achievements</h2>
+      <span class="text-muted" style="font-size:0.8rem" id="achievements-earned-label"></span>
+    </div>
+    <div id="achievements-strip" style="display:flex;gap:12px;flex-wrap:wrap;"></div>
   </div>
 
 </div>

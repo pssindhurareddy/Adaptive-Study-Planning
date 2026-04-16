@@ -788,3 +788,192 @@ select option {
   from { transform: translateY(20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
+
+/* ── Achievement badges ──────────────────────────────────────────────────── */
+
+.achievement-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  min-width: 72px;
+  text-align: center;
+  transition: all 0.2s ease;
+  cursor: default;
+}
+
+.achievement-badge.earned {
+  border-color: rgba(168, 85, 247, 0.4);
+  background: var(--card-bg-elevated);
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.15);
+}
+
+.achievement-badge.unearned {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+
+.achievement-badge:hover {
+  transform: translateY(-2px);
+}
+
+.achievement-icon { font-size: 1.4rem; }
+
+.achievement-title {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Collision rows ──────────────────────────────────────────────────────── */
+
+.collision-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(120, 80, 200, 0.08);
+}
+.collision-row:last-child { border-bottom: none; }
+
+/* ── Monthly Calendar ────────────────────────────────────────────────────── */
+
+.cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.cal-month-label {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.cal-day-name {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 4px 0 6px;
+}
+
+.cal-cell {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 6px;
+  min-height: 64px;
+  font-size: 0.75rem;
+  transition: background 0.15s;
+}
+
+.cal-cell.cal-empty {
+  background: transparent;
+  border-color: transparent;
+}
+
+.cal-cell.cal-today {
+  border-color: var(--accent);
+  background: rgba(34, 211, 238, 0.07);
+}
+
+.cal-cell.cal-has-tasks {
+  background: var(--card-bg-elevated);
+}
+
+.cal-day-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+}
+
+.cal-today .cal-day-num {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.cal-task-chip {
+  font-size: 0.6rem;
+  border-radius: 3px;
+  padding: 1px 4px;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-task-chip.cal-low    { background: var(--badge-green-bg);  color: var(--badge-green-text); }
+.cal-task-chip.cal-medium { background: var(--badge-yellow-bg); color: var(--badge-yellow-text); }
+.cal-task-chip.cal-high   { background: var(--badge-red-bg);    color: var(--badge-red-text); }
+
+.cal-more {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+}
+
+/* ── Dependency Graph ────────────────────────────────────────────────────── */
+
+.dep-graph {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dep-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.dep-arrow { color: var(--text-muted); font-size: 0.9rem; }
+
+.dep-task {
+  font-weight: 600;
+  color: var(--text-primary);
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dep-label { color: var(--text-muted); font-size: 0.72rem; }
+
+.dep-prereq {
+  font-weight: 600;
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dep-done    { color: var(--badge-green-text); }
+.dep-pending { color: var(--badge-yellow-text); }
+
+/* ── View toggle button active state ─────────────────────────────────────── */
+
+.view-btn.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+

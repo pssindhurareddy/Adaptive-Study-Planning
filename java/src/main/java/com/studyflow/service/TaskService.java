@@ -92,10 +92,12 @@ public class TaskService {
 
     /**
      * Add a new task to the ArrayList.
-     * Java equivalent: tasks.add(new TaskUnit(...))
+     * Saves undo snapshot before mutating.
+     * Java equivalent: undoStack.push(snapshot); tasks.add(new TaskUnit(...))
      */
     public TaskUnit addTask(int subjectId, String title, TaskDifficulty difficulty,
                             int estimatedMinutes, String deadline) {
+        store.pushUndo();
         int id = store.getNextTaskId();
         TaskUnit t = new TaskUnit(id, subjectId, title, difficulty, estimatedMinutes,
                 deadline, TaskStatus.Scheduled);
@@ -106,18 +108,22 @@ public class TaskService {
 
     /**
      * Delete a task by id.
-     * Java equivalent: tasks.removeIf(t -> t.getId() == taskId)
+     * Saves undo snapshot before mutating.
+     * Java equivalent: undoStack.push(snapshot); tasks.removeIf(t -> t.getId() == taskId)
      */
     public boolean deleteTask(int taskId) {
+        store.pushUndo();
         return store.getTasks().removeIf(t -> t.getId() == taskId);
     }
 
     /**
      * Update task status — Iterator pattern.
-     * Status transitions: Scheduled → InProgress → Completed
+     * Status transitions: Scheduled → InProgress → Completed.
+     * Saves undo snapshot before mutating.
      * Java equivalent: for (TaskUnit t : tasks) { if (t.id == taskId) { t.status = newStatus; } }
      */
     public Optional<TaskUnit> updateTaskStatus(int taskId, TaskStatus newStatus) {
+        store.pushUndo();
         for (TaskUnit t : store.getTasks()) {
             if (t.getId() == taskId) {
                 t.setStatus(newStatus);
@@ -126,6 +132,28 @@ public class TaskService {
         }
         return Optional.empty();
     }
+
+    /**
+     * Undo the last task mutation (add / delete / status change).
+     * Returns true if undo was performed.
+     */
+    public boolean undo() {
+        return store.undo();
+    }
+
+    /**
+     * Redo the most-recently undone task mutation.
+     * Returns true if redo was performed.
+     */
+    public boolean redo() {
+        return store.redo();
+    }
+
+    /** Returns true if undo history is available. */
+    public boolean canUndo() { return store.canUndo(); }
+
+    /** Returns true if redo history is available. */
+    public boolean canRedo() { return store.canRedo(); }
 
     /**
      * Filter tasks by status.

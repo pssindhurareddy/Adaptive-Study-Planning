@@ -13,7 +13,11 @@
     <h1 class="page-title">Tasks</h1>
     <p class="page-subtitle">Manage your study tasks and focus sessions</p>
   </div>
-  <button class="btn btn-primary" onclick="openAddTaskModal()">+ Add Task</button>
+  <div class="flex gap-2">
+    <button class="btn btn-secondary btn-sm" id="undo-btn" onclick="undoTask()" disabled title="Undo">↩ Undo</button>
+    <button class="btn btn-secondary btn-sm" id="redo-btn" onclick="redoTask()" disabled title="Redo">↪ Redo</button>
+    <button class="btn btn-primary" onclick="openAddTaskModal()">+ Add Task</button>
+  </div>
 </div>
 
 <div class="page-body">
@@ -28,18 +32,28 @@
     <div>
       <div class="section-header">
         <h2 class="section-title">📋 All Tasks</h2>
-        <div class="flex gap-2">
+        <div class="flex gap-2 flex-wrap">
+          <!-- View toggle: List / Calendar -->
+          <div class="flex gap-1" style="margin-right:8px">
+            <button class="btn btn-secondary btn-sm view-btn active" id="view-list-btn" onclick="setView('list')" title="List View">≡ List</button>
+            <button class="btn btn-secondary btn-sm view-btn" id="view-cal-btn"  onclick="setView('calendar')" title="Calendar View">📅 Calendar</button>
+          </div>
           <button class="btn btn-secondary btn-sm filter-btn" onclick="filterTasks('All')">All</button>
           <button class="btn btn-secondary btn-sm filter-btn" onclick="filterTasks('Scheduled')">Scheduled</button>
           <button class="btn btn-secondary btn-sm filter-btn" onclick="filterTasks('InProgress')">In Progress</button>
           <button class="btn btn-secondary btn-sm filter-btn" onclick="filterTasks('Completed')">Completed</button>
         </div>
       </div>
+
+      <!-- List view -->
       <div id="task-list" class="task-list"></div>
+      <!-- Calendar view (hidden by default) -->
+      <div id="calendar-view" class="hidden"></div>
     </div>
 
-    <!-- Subjects panel -->
+    <!-- Right column: Subjects + Dependency Graph -->
     <div>
+      <!-- Subjects panel -->
       <div class="section-header mb-3">
         <h2 class="section-title">📚 Subjects</h2>
       </div>
@@ -59,7 +73,29 @@
         </form>
       </div>
 
-      <div id="subject-list" class="task-list"></div>
+      <div id="subject-list" class="task-list mb-4"></div>
+
+      <!-- Dependency Graph -->
+      <div class="section-header" style="margin-top:20px">
+        <h2 class="section-title">🔗 Dependency Graph</h2>
+        <button class="btn btn-ghost btn-sm" onclick="loadDependencyGraph()">↺ Refresh</button>
+      </div>
+      <div class="card">
+        <div id="dep-graph-container">
+          <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:0.85rem">
+            Loading dependency graph…
+          </div>
+        </div>
+        <div style="margin-top:12px;font-size:0.8rem;color:var(--text-muted)">
+          <strong>Add dependency:</strong>
+        </div>
+        <div class="flex gap-2 mt-2">
+          <select id="dep-task-id" style="flex:1"></select>
+          <span style="line-height:2.2;color:var(--text-muted);font-size:0.8rem">depends on</span>
+          <select id="dep-on-id" style="flex:1"></select>
+          <button class="btn btn-primary btn-sm" onclick="addDependency()">+ Add</button>
+        </div>
+      </div>
     </div>
 
   </div>

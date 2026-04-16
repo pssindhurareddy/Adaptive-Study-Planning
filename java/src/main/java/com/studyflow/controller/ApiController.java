@@ -12,7 +12,9 @@ import java.util.Optional;
 /**
  * ApiController — REST @RestController exposing all backend methods.
  * Java equivalent: @RestController exposing methods from
- *   TaskService, SessionService, ScoreCalculator, SchedulingService, AnalyticsService
+ *   TaskService, SessionService, ScoreCalculator, SchedulingService,
+ *   AnalyticsService, BurnoutService, CollisionService, ProcrastinationService,
+ *   AchievementService
  */
 @RestController
 @RequestMapping("/api")
@@ -26,11 +28,19 @@ public class ApiController {
     private final AnalyticsService analyticsService;
     private final SchedulingService schedulingService;
     private final SeedService seedService;
+    private final BurnoutService burnoutService;
+    private final CollisionService collisionService;
+    private final ProcrastinationService procrastinationService;
+    private final AchievementService achievementService;
+    private final StudyDataStore store;
 
     public ApiController(UserService userService, SubjectService subjectService,
                          TaskService taskService, ScoreCalculator scoreCalculator,
                          SessionService sessionService, AnalyticsService analyticsService,
-                         SchedulingService schedulingService, SeedService seedService) {
+                         SchedulingService schedulingService, SeedService seedService,
+                         BurnoutService burnoutService, CollisionService collisionService,
+                         ProcrastinationService procrastinationService,
+                         AchievementService achievementService, StudyDataStore store) {
         this.userService = userService;
         this.subjectService = subjectService;
         this.taskService = taskService;
@@ -39,6 +49,11 @@ public class ApiController {
         this.analyticsService = analyticsService;
         this.schedulingService = schedulingService;
         this.seedService = seedService;
+        this.burnoutService = burnoutService;
+        this.collisionService = collisionService;
+        this.procrastinationService = procrastinationService;
+        this.achievementService = achievementService;
+        this.store = store;
     }
 
     // ── Seed ──────────────────────────────────────────────────────────────────
@@ -140,6 +155,77 @@ public class ApiController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // ── Undo / Redo ───────────────────────────────────────────────────────────
+
+    /**
+     * Undo the last task mutation (add / delete / status change).
+     * Returns updated task list.
+     */
+    @PostMapping("/tasks/undo")
+    public ResponseEntity<Map<String, Object>> undoTask() {
+        boolean done = taskService.undo();
+        return ResponseEntity.ok(Map.of(
+                "success", done,
+                "canUndo", taskService.canUndo(),
+                "canRedo", taskService.canRedo(),
+                "tasks", taskService.listTasksSorted()
+        ));
+    }
+
+    /**
+     * Redo the most-recently undone task mutation.
+     * Returns updated task list.
+     */
+    @PostMapping("/tasks/redo")
+    public ResponseEntity<Map<String, Object>> redoTask() {
+        boolean done = taskService.redo();
+        return ResponseEntity.ok(Map.of(
+                "success", done,
+                "canUndo", taskService.canUndo(),
+                "canRedo", taskService.canRedo(),
+                "tasks", taskService.listTasksSorted()
+        ));
+    }
+
+    /** Returns current undo/redo availability. */
+    @GetMapping("/tasks/history")
+    public Map<String, Boolean> getUndoRedoState() {
+        return Map.of("canUndo", taskService.canUndo(), "canRedo", taskService.canRedo());
+    }
+
+    // ── Task Dependencies ─────────────────────────────────────────────────────
+
+    /** Get all task dependencies (edges of the dependency graph). */
+    @GetMapping("/dependency-graph")
+    public List<TaskDependency> getDependencyGraph() {
+        return store.getDependencies();
+    }
+
+    /** Add a dependency: taskId depends on dependsOnTaskId. */
+    @PostMapping("/tasks/{taskId}/dependencies")
+    public ResponseEntity<TaskDependency> addDependency(@PathVariable int taskId,
+                                                        @RequestBody Map<String, Object> body) {
+        int dependsOnTaskId = ((Number) body.get("dependsOnTaskId")).intValue();
+        // Prevent duplicate edges
+        boolean exists = store.getDependencies().stream()
+                .anyMatch(d -> d.getTaskId() == taskId && d.getDependsOnTaskId() == dependsOnTaskId);
+        if (!exists) {
+            TaskDependency dep = new TaskDependency(taskId, dependsOnTaskId);
+            store.getDependencies().add(dep);
+            return ResponseEntity.ok(dep);
+        }
+        return ResponseEntity.ok(new TaskDependency(taskId, dependsOnTaskId));
+    }
+
+    /** Remove a dependency between two tasks. */
+    @DeleteMapping("/tasks/{taskId}/dependencies/{dependsOnId}")
+    public ResponseEntity<Boolean> removeDependency(@PathVariable int taskId,
+                                                    @PathVariable int dependsOnId) {
+        boolean removed = store.getDependencies()
+                .removeIf(d -> d.getTaskId() == taskId && d.getDependsOnTaskId() == dependsOnId);
+        return ResponseEntity.ok(removed);
+    }
+
     // ── Dashboard ─────────────────────────────────────────────────────────────
 
     /** Java equivalent: ScoreCalculator.getDashboardData(tasks, logs) */
@@ -228,5 +314,65 @@ public class ApiController {
     @GetMapping("/subject-leaderboard")
     public List<SubjectLeaderboardEntry> getSubjectLeaderboard() {
         return schedulingService.getSubjectLeaderboard();
+    }
+
+    /** Get scheduled break blocks for the day. */
+    @GetMapping("/breaks")
+    public List<BreakBlock> getScheduledBreaks() {
+        return schedulingService.getScheduledBreaks();
+    }
+
+    // ── Burnout Detector ──────────────────────────────────────────────────────
+
+    /**
+     * Detect burnout risk from session history and user fatigue level.
+     * Returns level: "none" | "low" | "medium" | "high"
+     */
+    @GetMapping("/burnout")
+    public BurnoutStatus getBurnoutStatus() {
+        return burnoutService.getBurnoutStatus();
+    }
+
+    // ── Procrastination Debt Tracker ──────────────────────────────────────────
+
+    /**
+     * Return procrastination debt: overdue tasks + debt score.
+     * overdueCount: tasks past deadline not yet completed
+     * debtScore: 0–100+ penalty
+     */
+    @GetMapping("/procrastination-debt")
+    public ProcrastinationDebt getProcrastinationDebt() {
+        return procrastinationService.getDebt();
+    }
+
+    // ── Exam Collision Detector ───────────────────────────────────────────────
+
+    /** Find all deadline collisions among non-completed tasks. */
+    @GetMapping("/collisions")
+    public List<ExamCollision> getCollisions() {
+        return collisionService.findCollisions();
+    }
+
+    /**
+     * Resolve a collision by shifting the specified task's deadline forward.
+     * Body: { "taskId": N, "shiftDays": D }
+     * Returns the updated task.
+     */
+    @PostMapping("/collisions/resolve")
+    public ResponseEntity<TaskUnit> resolveCollision(@RequestBody Map<String, Object> body) {
+        int taskId = ((Number) body.get("taskId")).intValue();
+        int shiftDays = body.containsKey("shiftDays")
+                ? ((Number) body.get("shiftDays")).intValue() : 2;
+        Optional<TaskUnit> updated = collisionService.resolveCollision(taskId, shiftDays);
+        return updated.map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // ── Achievements ──────────────────────────────────────────────────────────
+
+    /** Return all achievements with their current earned status. */
+    @GetMapping("/achievements")
+    public List<Achievement> getAchievements() {
+        return achievementService.getAchievements();
     }
 }
