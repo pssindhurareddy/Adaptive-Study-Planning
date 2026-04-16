@@ -11,11 +11,13 @@ import {
   getPriorityQueue,
   getSubjectLeaderboard,
   getTaskStats,
+  getUser,
   listSubjects,
   listTasks,
   removeSubject,
   startFocusSession,
   updateTaskStatus,
+  updateUser,
 } from "../lib/backend-client";
 import type { TaskStatus } from "../types/study";
 

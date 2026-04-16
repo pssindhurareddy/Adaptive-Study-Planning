@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Java Concepts — Adaptive Study Planning System</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .page {
+      max-width: 850px;
+      margin: 0 auto;
+      padding: 40px 48px;
+    }
+
+    /* ── COVER HEADER ── */
+    .cover {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 50%, #6d28d9 100%);
+      color: white;
+      padding: 48px;
+      border-radius: 16px;
+      margin-bottom: 36px;
+      position: relative;
+      overflow: hidden;
+    }
+    .cover::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 220px; height: 220px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 50%;
+    }
+    .cover::after {
+      content: '';
+      position: absolute;
+      bottom: -40px; left: -40px;
+      width: 160px; height: 160px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 50%;
+    }
+    .cover-tag {
+      display: inline-block;
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+    .cover h1 {
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+    .cover p {
+      font-size: 14px;
+      opacity: 0.85;
+      max-width: 520px;
+    }
+    .cover-meta {
+      margin-top: 24px;
+      display: flex;
+      gap: 24px;
+      font-size: 12px;
+      opacity: 0.75;
+    }
+    .cover-meta span { display: flex; align-items: center; gap: 5px; }
+
+    /* ── SECTION ── */
+    .section {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      margin-bottom: 24px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    .section-header {
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .section-icon {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px;
+      flex-shrink: 0;
+    }
+    .section-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .section-subtitle {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 1px;
+    }
+    .section-body {
+      padding: 0;
+    }
+
+    /* ── COLOR THEMES ── */
+    .theme-blue .section-icon { background: #eff6ff; }
+    .theme-blue .section-header { border-left: 4px solid #3b82f6; }
+    .theme-green .section-icon { background: #f0fdf4; }
+    .theme-green .section-header { border-left: 4px solid #22c55e; }
+    .theme-purple .section-icon { background: #faf5ff; }
+    .theme-purple .section-header { border-left: 4px solid #a855f7; }
+    .theme-orange .section-icon { background: #fff7ed; }
+    .theme-orange .section-header { border-left: 4px solid #f97316; }
+    .theme-red .section-icon { background: #fef2f2; }
+    .theme-red .section-header { border-left: 4px solid #ef4444; }
+    .theme-teal .section-icon { background: #f0fdfa; }
+    .theme-teal .section-header { border-left: 4px solid #14b8a6; }
+    .theme-indigo .section-icon { background: #eef2ff; }
+    .theme-indigo .section-header { border-left: 4px solid #6366f1; }
+    .theme-yellow .section-icon { background: #fefce8; }
+    .theme-yellow .section-header { border-left: 4px solid #eab308; }
+
+    /* ── TABLE ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    thead tr {
+      background: #f8fafc;
+    }
+    thead th {
+      padding: 10px 20px;
+      text-align: left;
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    tbody tr {
+      border-bottom: 1px solid #f8fafc;
+      transition: background 0.15s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #fafbff; }
+    tbody td {
+      padding: 11px 20px;
+      vertical-align: top;
+    }
+    td:first-child {
+      font-family: 'Fira Code', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      color: #4f46e5;
+      white-space: nowrap;
+      width: 240px;
+    }
+    td:last-child {
+      color: #374151;
+      font-size: 12.5px;
+      line-height: 1.55;
+    }
+
+    /* ── CONCEPT CHIPS ── */
+    .chip {
+      display: inline-block;
+      background: #eef2ff;
+      color: #4338ca;
+      border-radius: 5px;
+      padding: 1px 7px;
+      font-size: 11px;
+      font-weight: 500;
+      font-family: 'Fira Code', monospace;
+      margin-right: 4px;
+      white-space: nowrap;
+    }
+    .chip.green { background: #f0fdf4; color: #15803d; }
+    .chip.purple { background: #faf5ff; color: #7e22ce; }
+    .chip.orange { background: #fff7ed; color: #c2410c; }
+    .chip.red { background: #fef2f2; color: #b91c1c; }
+
+    /* ── SUMMARY TABLE ── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 20px 24px;
+    }
+    .summary-item {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .summary-item .concept {
+      font-family: 'Fira Code', monospace;
+      font-size: 12px;
+      font-weight: 600;
+      color: #4f46e5;
+      margin-bottom: 4px;
+    }
+    .summary-item .where {
+      font-size: 11.5px;
+      color: #64748b;
+      line-height: 1.4;
+    }
+
+    /* ── FOOTER ── */
+    .footer {
+      text-align: center;
+      padding: 24px 0 8px;
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    /* ── PRINT ── */
+    @media print {
+      body { background: white; font-size: 12px; }
+      .page { padding: 20px 28px; }
+      .section { break-inside: avoid; box-shadow: none; }
+      .cover { border-radius: 10px; padding: 36px; }
+      .cover h1 { font-size: 22px; }
+      .summary-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- COVER -->
+  <div class="cover">
+    <div class="cover-tag">📘 Java Concepts Report</div>
+    <h1>Adaptive Study Planning System<br/>Java Concepts — Page by Page</h1>
+    <p>A complete breakdown of all Java data structures, algorithms, and OOP concepts used across every feature of the application.</p>
+    <div class="cover-meta">
+      <span>🧑‍💻 Backend: Motoko (Java-equivalent logic)</span>
+      <span>🖥️ Frontend: React + TypeScript</span>
+      <span>📄 3 Pages · 8 Features</span>
+    </div>
+  </div>
+
+  <!-- PAGE 1: DASHBOARD -->
+  <div class="section theme-blue">
+    <div class="section-header">
+      <div class="section-icon">📊</div>
+      <div>
+        <div class="section-title">Page 1 — Dashboard</div>
+        <div class="section-subtitle">src/frontend/src/pages/Dashboard.tsx</div>
+      </div>
+    </div>
+    <div class="section-body">
+      <table>
+        <thead><tr><th>Java Concept</th><th>How It's Used in the App</th></tr></thead>
+        <tbody>
+          <tr><td>ArrayList&lt;T&gt;</td><td>Tasks, subjects, and logs are all stored as lists — equivalent to <span class="chip">ArrayList&lt;TaskUnit&gt;</span>, <span class="chip">ArrayList&lt;Subject&gt;</span>, <span class="chip">ArrayList&lt;ProgressLog&gt;</span></td></tr>
+          <tr><td>Enhanced For-Each</td><td>Iterating over tasks to count completed, scheduled, in-progress — <span class="chip">for (TaskUnit t : tasks)</span></td></tr>
+          <tr><td>stream().filter()</td><td>Filtering tasks by status — <span class="chip">tasks.stream().filter(t -&gt; t.status == COMPLETED)</span></td></tr>
+          <tr><td>stream().count()</td><td>Counting tasks in each status bucket for the Task Statistics panel</td></tr>
+          <tr><td>Math.min() / Math.max()</td><td>Clamping focus score, stability score to range <span class="chip">[0, 100]</span></td></tr>
+          <tr><td>HashMap&lt;K,V&gt;</td><td>Active focus session tracked as <span class="chip">HashMap&lt;UserId, FocusSession&gt;</span> — shown in the active session banner</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PAGE 2: TASKS -->
+  <div class="section theme-green">
+    <div class="section-header">
+      <div class="section-icon">✅</div>
+      <div>
+        <div class="section-title">Page 2 — Tasks</div>
+        <div class="section-subtitle">src/frontend/src/pages/Tasks.tsx</div>
+      </div>
+    </div>
+    <div class="section-body">
+      <table>
+        <thead><tr><th>Java Concept</th><th>How It's Used in the App</th></tr></thead>
+        <tbody>
+          <tr><td>ArrayList.add()</td><td>Adding a new task — <span class="chip">tasks.add(new TaskUnit(...))</span></td></tr>
+          <tr><td>ArrayList.removeIf()</td><td>Deleting a task — <span class="chip">tasks.removeIf(t -&gt; t.id == taskId)</span></td></tr>
+          <tr><td>Iterator Pattern</td><td>Finding a task by ID and updating status — <span class="chip">for (TaskUnit t : tasks) { if (t.id == id) t.status = newStatus; }</span></td></tr>
+          <tr><td>Enum</td><td><span class="chip green">TaskStatus</span> (SCHEDULED, IN_PROGRESS, COMPLETED) and <span class="chip green">TaskDifficulty</span> (LOW, MEDIUM, HIGH)</td></tr>
+          <tr><td>Comparator</td><td>Tasks displayed sorted by priority score — <span class="chip">Comparator.comparingInt(Task::getPriorityScore).reversed()</span></td></tr>
+          <tr><td>Comparable&lt;T&gt;</td><td><span class="chip">getPriorityScore()</span> provides the value used by the Comparator — equivalent to <span class="chip">compareTo()</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PAGE 3: ANALYTICS -->
+  <div class="section theme-purple">
+    <div class="section-header">
+      <div class="section-icon">📈</div>
+      <div>
+        <div class="section-title">Page 3 — Analytics</div>
+        <div class="section-subtitle">src/frontend/src/pages/Analytics.tsx</div>
+      </div>
+    </div>
+    <div class="section-body">
+      <table>
+        <thead><tr><th>Java Concept</th><th>How It's Used in the App</th></tr></thead>
+        <tbody>
+          <tr><td>HashMap</td><td>Per-subject performance stats built as <span class="chip">Map&lt;String, SubjectStats&gt;</span></td></tr>
+          <tr><td>Array</td><td>7-day weekly hours — <span class="chip">int[] weeklyHours = new int[7]</span>; 7-day focus score history</td></tr>
+          <tr><td>stream().map()</td><td>Transforming <span class="chip">Subject</span> list → <span class="chip">SubjectPerformance</span> list for the charts</td></tr>
+          <tr><td>Accumulator Pattern</td><td><span class="chip">int total = 0; for (ProgressLog log : subjectLogs) &#123; total += score(log); &#125;</span></td></tr>
+          <tr><td>Math operations</td><td><span class="chip">Math.min(100, avg)</span> — computing average scores with integer division and clamp</td></tr>
+          <tr><td>Enhanced For-Each</td><td>Looping over subjects and logs to compute <span class="chip">avgScore</span> and <span class="chip">completedCount</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FEATURE: TASKMANAGER -->
+  <div class="section theme-orange">
+    <div class="section-header">
+      <div class="section-icon">⚙️</div>
+      <div>
+        <div class="section-title">Feature — TaskManager Class</div>
+        <div class="section-subtitle">Equivalent Java class: class TaskManager — manages ArrayList&lt;TaskUnit&gt;</div>
+      </div>
+    </div>
+    <div class="section-body">
+      <table>
+        <thead><tr><th>Java Concept</th><th>Exact Java Equivalent</th></tr></thead>
+        <tbody>
+          <tr><td>ArrayList&lt;T&gt;</td><td><span class="chip">List&lt;TaskUnit&gt; tasks = new ArrayList&lt;&gt;()</span> — stores all study tasks</td></tr>
+          <tr><td>tasks.add()</td><td><span class="chip">addTask()</span> function — adds new task to the list</td></tr>
+          <tr><td>tasks.removeIf()</td><td><span class="chip">deleteTask()</span> — filters out by ID and removes</td></tr>
+          <tr><td>stream().filter()</td><td><span class="chip">filterByStatus()</span> — filters tasks by SCHEDULED / IN_PROGRESS / COMPLETED</td></tr>
+          <tr><td>Collections.sort() + Comparator</td><td><span class="chip">sortByPriority()</span> — sorts by computed priority score descending</td></tr>
+          <tr><td>Comparable / compareTo()</td><td><span class="chip">getPriorityScore()</span> — returns score used by Comparator</td></tr>
+          <tr><td>Iterator Pattern</td><td><span class="chip">updateTaskStatus()</span> — loops through all tasks, finds by ID, updates status in-place</td></tr>
+          <tr><td>stream().sorted().collect()</td><td><span class="chip">listTasksSorted()</span> — returns sorted array of tasks</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FEATURE: SESSIONMANAGER -->
+  <div class="section theme-red">
+    <div class="section-header">
+      <div class="section-icon">⏱️</div>
+      <div>
+        <div class="section-title">Feature — SessionManager (Focus Sessions)</div>
+        <div class="section-subtitle">Equivalent Java class: class SessionManager — HashMap&lt;UserId, FocusSession&gt;</div>
+      </div>
+    </div>
+    <div class="section-body">
+      <table>
+        <thead><tr><th>Java Concept</th><th>Exact Java Equivalent</th></tr></thead>
+        <tbody>
+          <tr><td>HashMap&lt;K,V&gt;</td><td><span class="chip">HashMap&lt;Integer, FocusSession&gt; activeSessions = new HashMap&lt;&gt;()</span></td></tr>
+          <tr><td>HashMap.put()</td><td><span class="chip">startFocusSession()</span> — stores new session keyed by userId</td></tr>
+          <tr><td>HashMap.get()</td><td><span class="chip">getActiveSession()</span> — retrieves current active session</td></tr>
+          <tr><td>HashMap.remove()</td><td><span class="chip">endFocusSession()</span> — removes session when finished</td></tr>
+          <tr><td>HashMap.containsKey()</td><td>Checking if a session is active before ending it</td></tr>
+          <tr><td>Adaptive Logic (if/else)</td><td>Session duration (20/25/30 min) adapts based on past interruption average — <span class="chip">if (avgInterruptions &gt;= 4) 20 else if (&lt; 2) 30 else 25</span></td></tr>
+          <tr><td>Modulo Operator %</td><td><span class="chip">sessionNumber % 2 == 0</span> — even = break session, odd = focus session</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FEATURE: SCORECALCULATOR -->
+  <div class="section theme-teal">
+    <div class="section-header">
+      <div class="section-icon">🧮</div>
+      <div>
+        <div class="section-title">Feature — ScoreCalculator</div>
+        <div class="section-subtitle">Equivalent Java class: static utility — calculateFocusScore(), calculateStabilityScore()</div>
+      </div>
+    </div>
+    <div class="section-body">
+      <table>
+        <thead><tr><th>Java Concept</th><th>Exact Java Equivalent</th></tr></thead>
+        <tbody>
+          <tr><td>Static utility methods</td><td><span class="chip">calculateFocusScore()</span>, <span class="chip">calculateStabilityScore()</span>, <span class="chip">calculateStudyStreak()</span> — all stateless</td></tr>
+          <tr><td>Enhanced For-Each</td><td><span class="chip">for (ProgressLog log : logs) &#123; if (log.completed) completedCount++; &#125;</span></td></tr>
+          <tr><td>Math.min() / Math.max()</td><td>Clamping raw score to <span class="chip">[0, 100]</span></td></tr>
+          <tr><td>Accumulator Pattern</td><td><span class="chip">int total = 0; for (...) &#123; total += log.interruptions; &#125;</span></td></tr>
+          <tr><td>Integer Arithmetic</td><td><span class="chip">completedCount * 15 - interruptions * 3 + streakBonus</span></td></tr>
+          <tr><td>Ratio Calculation</td><td><span class="chip">(onTime * 100) / total</span> — stability score as a percentage</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FEATURE: SCHEDULING + PRIORITY QUEUE -->
+  <div class="section theme-indigo">
+    <div class="section-header">
+      <div class="section-icon">📅</div>
+      <div>
+        <div class="section-title">Feature — SchedulingService & PriorityQueue</div>
+        <div class="section-subtitle">Daily schedule generation + PriorityQueue&lt;PriorityQueueItem&gt; with Comparator</div>
+      </div>
+    </div>
+    <div class="section-body">
+      <table>
+        <thead><tr><th>Java Concept</th><th>Exact Java Equivalent</th></tr></thead>
+        <tbody>
+          <tr><td>stream().filter()</td><td>Filter out completed tasks — <span class="chip">tasks.stream().filter(t -&gt; t.status != COMPLETED)</span></td></tr>
+          <tr><td>Comparator.comparingInt().reversed()</td><td>Sort by priority score descending — urgency × difficulty multiplier</td></tr>
+          <tr><td>stream().limit(5)</td><td>Take only top 5 tasks — <span class="chip">Math.min(sorted.size(), 5)</span></td></tr>
+          <tr><td>IntStream.range()</td><td>Loop with index to assign time slots — <span class="chip">for (int i = 0; i &lt; cap; i++)</span></td></tr>
+          <tr><td>static final String[]</td><td><span class="chip">static final String[] TIME_SLOTS = &#123;"9:00 AM", "11:00 AM", ...&#125;</span></td></tr>
+          <tr><td>PriorityQueue</td><td><span class="chip">new PriorityQueue&lt;&gt;(Comparator.comparingInt(Item::getPriorityScore).reversed())</span></td></tr>
+          <tr><td>Switch Statement</td><td>Difficulty multiplier — <span class="chip">switch (d) &#123; case LOW: return 1; case MEDIUM: return 2; case HIGH: return 3; &#125;</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FEATURE: STATS + LEADERBOARD -->
+  <div class="section theme-yellow">
+    <div class="section-header">
+      <div class="section-icon">🏆</div>
+      <div>
+        <div class="section-title">Feature — Task Statistics & Subject Leaderboard</div>
+        <div class="section-subtitle">groupingBy() + sorted leaderboard by completionRate</div>
+      </div>
+    </div>
+    <div class="section-body">
+      <table>
+        <thead><tr><th>Java Concept</th><th>Exact Java Equivalent</th></tr></thead>
+        <tbody>
+          <tr><td>Collectors.groupingBy()</td><td><span class="chip">tasks.stream().collect(Collectors.groupingBy(TaskUnit::getStatus, Collectors.counting()))</span></td></tr>
+          <tr><td>Map.getOrDefault()</td><td>Get count per status — <span class="chip">grouped.getOrDefault(SCHEDULED, 0L)</span></td></tr>
+          <tr><td>stream().filter().count()</td><td>Count tasks per status bucket for the stats panel</td></tr>
+          <tr><td>stream().map()</td><td>Transform each <span class="chip">Subject</span> → <span class="chip">SubjectLeaderboardEntry</span></td></tr>
+          <tr><td>Comparator.comparingDouble().reversed()</td><td>Sort leaderboard by <span class="chip">completionRate</span> descending</td></tr>
+          <tr><td>Integer Ratio</td><td><span class="chip">(int) Math.round((double) completed / total * 100)</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="section">
+    <div class="section-header" style="border-left: 4px solid #0f172a;">
+      <div class="section-icon" style="background:#f1f5f9;">🔑</div>
+      <div>
+        <div class="section-title">Summary — All Java Concepts At a Glance</div>
+        <div class="section-subtitle">Quick reference for your teacher</div>
+      </div>
+    </div>
+    <div class="summary-grid">
+      <div class="summary-item"><div class="concept">ArrayList&lt;T&gt;</div><div class="where">Task list, Subject list, Progress logs</div></div>
+      <div class="summary-item"><div class="concept">HashMap&lt;K,V&gt;</div><div class="where">Active focus sessions, per-subject analytics</div></div>
+      <div class="summary-item"><div class="concept">PriorityQueue</div><div class="where">Priority Queue feature — top-5 ranked tasks</div></div>
+      <div class="summary-item"><div class="concept">Comparator / Collections.sort()</div><div class="where">Task sorting, Schedule, Leaderboard</div></div>
+      <div class="summary-item"><div class="concept">stream().filter()</div><div class="where">All status-based task filtering</div></div>
+      <div class="summary-item"><div class="concept">stream().map()</div><div class="where">Transforming tasks/subjects → display items</div></div>
+      <div class="summary-item"><div class="concept">stream().collect()</div><div class="where">Collecting results to list/array</div></div>
+      <div class="summary-item"><div class="concept">Collectors.groupingBy()</div><div class="where">Task Statistics panel</div></div>
+      <div class="summary-item"><div class="concept">Enum</div><div class="where">TaskStatus, TaskDifficulty</div></div>
+      <div class="summary-item"><div class="concept">Math.min() / Math.max()</div><div class="where">Score clamping in ScoreCalculator</div></div>
+      <div class="summary-item"><div class="concept">Enhanced For-Each</div><div class="where">Log aggregation, score calculation</div></div>
+      <div class="summary-item"><div class="concept">Static Utility Class</div><div class="where">ScoreCalculator methods</div></div>
+      <div class="summary-item"><div class="concept">Iterator Pattern</div><div class="where">Update task by ID in-place</div></div>
+      <div class="summary-item"><div class="concept">Switch Statement</div><div class="where">Difficulty multiplier in scheduling</div></div>
+      <div class="summary-item"><div class="concept">Comparable / compareTo()</div><div class="where">getPriorityScore() used by Comparator</div></div>
+      <div class="summary-item"><div class="concept">Modulo Operator %</div><div class="where">Pomodoro break detection (even/odd sessions)</div></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Adaptive Study Planning System · Java Concepts Reference · Generated for teacher presentation
+  </div>
+
+</div>
+
+<script>
+  // Auto-trigger print dialog
+  window.onload = function() {
+    document.title = "Java Concepts — Adaptive Study Planning System";
+  };
+</script>
+</body>
+</html>

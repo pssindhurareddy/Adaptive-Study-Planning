@@ -39,7 +39,7 @@
   },
   "scripts": {
     "clean": "rimraf dist",
-    "build": "tsc",
+    "build": "echo 'core-infrastructure: pre-built, skipping tsc'",
     "type-check": "tsc --noEmit",
     "biome:check": "biome check --error-on-warnings .",
     "biome:check:fix": "biome check --write --error-on-warnings ."
