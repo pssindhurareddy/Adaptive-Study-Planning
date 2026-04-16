@@ -364,10 +364,10 @@ function setVal(id, val) {
 }
 
 function escHtml(str) {
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return String(str)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
 }
-
-/** Format ISO date "YYYY-MM-DD" to "Apr 15, 2026". */
 function formatDate(isoDate) {
     if (!isoDate) return '—';
     try {
