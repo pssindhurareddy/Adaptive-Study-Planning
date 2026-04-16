@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout(
+        'Dashboard',
+        ${activePage},
+        ~{::pageBody},
+        ~{::pageScript}
+      )}">
+
+<th:block th:fragment="pageBody">
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle">Track your focus, progress, and study schedule</p>
+  </div>
+</div>
+
+<div class="page-body">
+
+  <!-- Active session banner -->
+  <div id="session-banner" class="hidden"></div>
+
+  <!-- Metric cards -->
+  <div class="section">
+    <div class="grid-4">
+
+      <!-- Focus Score Ring -->
+      <div class="card card-elevated score-card" style="grid-row: span 1;">
+        <div class="score-ring-wrapper" id="focus-ring" style="margin:0 auto 10px;"></div>
+        <div class="card-title" style="text-align:center">Focus Score</div>
+      </div>
+
+      <!-- Stats -->
+      <div class="card">
+        <div class="card-title">🛡 Stability</div>
+        <div class="card-value" id="stat-stability">—</div>
+        <div class="text-muted" style="font-size:0.75rem;margin-top:4px">On-time completion rate</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🔥 Study Streak</div>
+        <div class="card-value" id="stat-streak">—</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📋 Total Tasks</div>
+        <div class="card-value" id="stat-total">—</div>
+        <div style="display:flex;gap:8px;margin-top:8px;font-size:0.75rem;color:var(--text-muted)">
+          <span id="stat-completed" style="color:var(--badge-green-text)">—</span> done ·
+          <span id="stat-inprogress" style="color:var(--badge-yellow-text)">—</span> in-progress ·
+          <span id="stat-scheduled" style="color:var(--badge-blue-text)">—</span> scheduled
+        </div>
+        <div class="progress-bar-container mt-2">
+          <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
+        </div>
+        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;text-align:right" id="progress-pct">0%</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Today's schedule + Priority Queue -->
+  <div class="grid-2">
+
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">📅 Today's Schedule</h2>
+        <a th:href="@{/tasks}" class="btn btn-ghost btn-sm">Manage tasks →</a>
+      </div>
+      <div id="daily-schedule" class="task-list"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <h2 class="section-title">🎯 Priority Queue</h2>
+        <span class="text-muted" style="font-size:0.8rem">Top 5 tasks</span>
+      </div>
+      <div id="priority-queue"></div>
+    </div>
+
+  </div>
+
+</div>
+</th:block>
+
+<th:block th:fragment="pageScript">
+  <script th:src="@{/js/dashboard.js}"></script>
+</th:block>
+</html>

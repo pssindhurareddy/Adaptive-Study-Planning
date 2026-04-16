@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout(
+        'Analytics',
+        ${activePage},
+        ~{::pageBody},
+        ~{::pageScript}
+      )}">
+
+<th:block th:fragment="pageBody">
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Analytics</h1>
+    <p class="page-subtitle">Performance insights and study trends</p>
+  </div>
+</div>
+
+<div class="page-body">
+
+  <!-- Summary metrics -->
+  <div class="section">
+    <div class="grid-4">
+      <div class="card">
+        <div class="card-title">Focus Score</div>
+        <div class="card-value" id="a-focus">—</div>
+      </div>
+      <div class="card">
+        <div class="card-title">🛡 Stability</div>
+        <div class="card-value" id="a-stability">—</div>
+      </div>
+      <div class="card">
+        <div class="card-title">🔥 Streak</div>
+        <div class="card-value" id="a-streak">—</div>
+        <div class="text-muted" style="font-size:0.72rem;margin-top:4px">sessions</div>
+      </div>
+      <div class="card">
+        <div class="card-title">✅ Completed</div>
+        <div class="card-value" id="a-completed">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts row -->
+  <div class="grid-2" style="margin-bottom:24px">
+    <div class="card">
+      <div class="card-title mb-2">📈 7-Day Focus Score</div>
+      <div class="chart-container">
+        <canvas id="focus-chart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title mb-2">📊 Weekly Study Hours</div>
+      <div class="chart-container">
+        <canvas id="weekly-chart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Subject performance + leaderboard -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title mb-2">📚 Subject Performance (Avg Score)</div>
+      <div class="chart-container">
+        <canvas id="subject-chart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title mb-2">🏆 Subject Leaderboard</div>
+      <div id="leaderboard"></div>
+    </div>
+  </div>
+
+</div>
+</th:block>
+
+<th:block th:fragment="pageScript">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script th:src="@{/js/analytics.js}"></script>
+</th:block>
+</html>

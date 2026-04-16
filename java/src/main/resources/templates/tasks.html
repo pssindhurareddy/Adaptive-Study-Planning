@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout(
+        'Tasks',
+        ${activePage},
+        ~{::pageBody},
+        ~{::pageScript}
+      )}">
+
+<th:block th:fragment="pageBody">
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Tasks</h1>
+    <p class="page-subtitle">Manage your study tasks and focus sessions</p>
+  </div>
+  <button class="btn btn-primary" onclick="openAddTaskModal()">+ Add Task</button>
+</div>
+
+<div class="page-body">
+
+  <!-- Active session banner -->
+  <div id="session-banner" class="hidden"></div>
+
+  <!-- Main split: tasks left, subjects right -->
+  <div class="grid-2" style="align-items:start">
+
+    <!-- Tasks panel -->
+    <div>
+      <div class="section-header">
+        <h2 class="section-title">📋 All Tasks</h2>
+        <div class="flex gap-2">
+          <button class="btn btn-secondary btn-sm filter-btn" onclick="filterTasks('All')">All</button>
+          <button class="btn btn-secondary btn-sm filter-btn" onclick="filterTasks('Scheduled')">Scheduled</button>
+          <button class="btn btn-secondary btn-sm filter-btn" onclick="filterTasks('InProgress')">In Progress</button>
+          <button class="btn btn-secondary btn-sm filter-btn" onclick="filterTasks('Completed')">Completed</button>
+        </div>
+      </div>
+      <div id="task-list" class="task-list"></div>
+    </div>
+
+    <!-- Subjects panel -->
+    <div>
+      <div class="section-header mb-3">
+        <h2 class="section-title">📚 Subjects</h2>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-title mb-2">Add Subject</div>
+        <form id="add-subject-form">
+          <div class="form-group">
+            <label>Subject Name</label>
+            <input id="subject-name" type="text" placeholder="e.g. Mathematics" required/>
+          </div>
+          <div class="form-group">
+            <label>Weight (1–10)</label>
+            <input id="subject-weight" type="number" min="1" max="10" value="5" required/>
+          </div>
+          <button type="submit" class="btn btn-primary w-full">Add Subject</button>
+        </form>
+      </div>
+
+      <div id="subject-list" class="task-list"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Add Task Modal ─────────────────────────────────────────────────────── -->
+<div id="add-task-modal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Add New Task</h2>
+      <button class="btn btn-ghost btn-icon" onclick="closeAddTaskModal()">✕</button>
+    </div>
+
+    <form id="add-task-form">
+      <div class="form-group">
+        <label>Subject</label>
+        <select id="task-subject" required></select>
+      </div>
+      <div class="form-group">
+        <label>Task Title</label>
+        <input id="task-title" type="text" placeholder="e.g. Calculus Chapter 5 Review" required/>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Difficulty</label>
+          <select id="task-difficulty">
+            <option value="Low">Low</option>
+            <option value="Medium" selected>Medium</option>
+            <option value="High">High</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Estimated Minutes</label>
+          <input id="task-minutes" type="number" min="5" max="480" value="60" required/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Deadline</label>
+        <input id="task-deadline" type="date" required/>
+      </div>
+      <div class="flex gap-2 mt-2">
+        <button type="button" class="btn btn-secondary" onclick="closeAddTaskModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="flex:1">Add Task</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+</th:block>
+
+<th:block th:fragment="pageScript">
+  <script th:src="@{/js/tasks.js}"></script>
+</th:block>
+</html>
