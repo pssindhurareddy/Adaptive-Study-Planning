@@ -24,38 +24,49 @@
   <div class="section">
     <div class="grid-4">
 
-      <!-- Focus Score Ring -->
-      <div class="card card-elevated score-card" style="grid-row: span 1;">
-        <div class="score-ring-wrapper" id="focus-ring" style="margin:0 auto 10px;"></div>
-        <div class="card-title" style="text-align:center">Focus Score</div>
-      </div>
-
-      <!-- Stats -->
-      <div class="card">
-        <div class="card-title">🛡 Stability</div>
-        <div class="card-value" id="stat-stability">—</div>
-        <div class="text-muted" style="font-size:0.75rem;margin-top:4px">On-time completion rate</div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">🔥 Study Streak</div>
-        <div class="card-value" id="stat-streak">—</div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">📋 Total Tasks</div>
-        <div class="card-value" id="stat-total">—</div>
-        <div style="display:flex;gap:8px;margin-top:8px;font-size:0.75rem;color:var(--text-muted)">
-          <span id="stat-completed" style="color:var(--badge-green-text)">—</span> done ·
-          <span id="stat-inprogress" style="color:var(--badge-yellow-text)">—</span> in-progress ·
-          <span id="stat-scheduled" style="color:var(--badge-blue-text)">—</span> scheduled
+      <!-- Focus Score -->
+      <div class="card card-elevated">
+        <div class="card-title">Focus Score</div>
+        <div class="card-value" id="stat-focus" style="color:var(--primary)">—</div>
+        <div class="text-muted" style="font-size:0.75rem;margin-top:4px">out of 100</div>
+        <div class="progress-bar-container mt-2">
+          <div class="progress-bar-fill" id="focus-progress-bar" style="width:0%"></div>
         </div>
+      </div>
+
+      <!-- Study Streak -->
+      <div class="card">
+        <div class="card-title">Study Streak</div>
+        <div class="card-value" id="stat-streak" style="color:var(--accent)">—</div>
+        <div class="text-muted" style="font-size:0.75rem;margin-top:4px">consecutive days</div>
+      </div>
+
+      <!-- Daily Progress -->
+      <div class="card">
+        <div class="card-title">Daily Progress</div>
+        <div class="card-value" id="stat-daily-progress" style="color:var(--badge-green-text)">—</div>
+        <div class="text-muted" style="font-size:0.75rem;margin-top:4px">tasks completed</div>
         <div class="progress-bar-container mt-2">
           <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
         </div>
         <div style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;text-align:right" id="progress-pct">0%</div>
       </div>
 
+      <!-- Stability Score -->
+      <div class="card">
+        <div class="card-title">Stability Score</div>
+        <div class="card-value" id="stat-stability" style="color:var(--primary)">—</div>
+        <div class="text-muted" style="font-size:0.75rem;margin-top:4px">consistency metric</div>
+      </div>
+
+    </div>
+
+    <!-- Task breakdown row (hidden stat IDs kept for JS compatibility) -->
+    <div style="display:none">
+      <span id="stat-total"></span>
+      <span id="stat-completed"></span>
+      <span id="stat-inprogress"></span>
+      <span id="stat-scheduled"></span>
     </div>
   </div>
 

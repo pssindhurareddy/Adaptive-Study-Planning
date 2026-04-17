@@ -10,12 +10,12 @@
 <th:block th:fragment="pageBody">
 <div class="page-header">
   <div>
-    <h1 class="page-title">Tasks</h1>
-    <p class="page-subtitle">Manage your study tasks and focus sessions</p>
+    <h1 class="page-title">Task Manager</h1>
+    <p class="page-subtitle">Manage your study tasks and track progress</p>
   </div>
   <div class="flex gap-2">
-    <button class="btn btn-secondary btn-sm" id="undo-btn" onclick="undoTask()" disabled title="Undo">↩ Undo</button>
-    <button class="btn btn-secondary btn-sm" id="redo-btn" onclick="redoTask()" disabled title="Redo">↪ Redo</button>
+    <button class="btn btn-secondary btn-sm" id="undo-btn" onclick="undoTask()" disabled title="Undo last action">↩ Undo</button>
+    <button class="btn btn-secondary btn-sm" id="redo-btn" onclick="redoTask()" disabled title="Redo last action">↪ Redo</button>
     <button class="btn btn-primary" onclick="openAddTaskModal()">+ Add Task</button>
   </div>
 </div>

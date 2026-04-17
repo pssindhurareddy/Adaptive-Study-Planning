@@ -45,26 +45,27 @@ async function loadMetrics() {
 }
 
 function renderMetrics(dash, stats) {
-    // Focus Score Ring
-    const ringWrap = document.getElementById('focus-ring');
-    if (ringWrap) {
-        ringWrap.innerHTML = buildFocusRingSVG(dash.focusScore, 140);
-        const inner = document.createElement('div');
-        inner.className = 'score-ring-inner';
-        inner.innerHTML = `<span class="score-number">${dash.focusScore}</span><span class="score-label">Focus Score</span>`;
-        ringWrap.style.position = 'relative';
-        ringWrap.appendChild(inner);
-    }
-
+    // Focus Score card
     setVal('stat-focus', dash.focusScore);
+    const focusBar = document.getElementById('focus-progress-bar');
+    if (focusBar) { focusBar.style.width = dash.focusScore + '%'; }
+
+    // Study Streak — show as "Xd" (consecutive days format)
+    setVal('stat-streak', dash.studyStreak + 'd');
+
+    // Daily Progress — "completedTasks / totalTasks"
+    setVal('stat-daily-progress', dash.completedTasks + '/' + dash.totalTasks);
+
+    // Stability Score
     setVal('stat-stability', dash.stabilityScore);
-    setVal('stat-streak', dash.studyStreak + ' days');
+
+    // Hidden breakdown stats (kept for JS compatibility)
     setVal('stat-total', dash.totalTasks);
     setVal('stat-completed', dash.completedTasks);
     setVal('stat-inprogress', dash.inProgressTasks);
     setVal('stat-scheduled', dash.scheduledTasks);
 
-    // Progress bar
+    // Progress bar (daily progress card)
     const pct = dash.totalTasks > 0 ? Math.round((dash.completedTasks / dash.totalTasks) * 100) : 0;
     const bar = document.getElementById('progress-bar');
     if (bar) { bar.style.width = pct + '%'; }
@@ -237,20 +238,29 @@ async function loadBurnout() {
         const b = await api.get('/burnout');
         const levelColors = { none: '#6ee7b7', low: '#fcd34d', medium: '#fb923c', high: '#fca5a5' };
         const levelIcons  = { none: '😊', low: '😐', medium: '😟', high: '🚨' };
+        const levelBadgeClass = { none: 'badge-completed', low: 'badge-low', medium: 'badge-medium', high: 'badge-high' };
         const color = levelColors[b.level] || '#a89fc0';
+        const badgeClass = levelBadgeClass[b.level] || 'badge-gray';
+
+        // Update card header with level badge
+        const burnoutCard = document.getElementById('burnout-card');
+        if (burnoutCard) {
+            const titleEl = burnoutCard.querySelector('.card-title');
+            if (titleEl) {
+                titleEl.innerHTML = `🧠 Burnout Detector <span class="badge ${badgeClass}" style="float:right;text-transform:capitalize;font-size:0.7rem">${b.level}</span>`;
+            }
+        }
+
         el.innerHTML = `
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-            <span style="font-size:1.6rem">${levelIcons[b.level] || '❓'}</span>
-            <div>
-              <div style="font-size:1.2rem;font-weight:700;color:${color};text-transform:capitalize">${b.level}</div>
-              <div style="font-size:0.72rem;color:var(--text-muted)">Risk Score: ${b.score}/100</div>
-            </div>
-          </div>
           <div class="progress-bar-container mb-2">
             <div class="progress-bar-fill" style="width:${b.score}%;background:${color}"></div>
           </div>
-          <p style="font-size:0.8rem;color:var(--text-secondary);margin:6px 0 0">${escHtml(b.message)}</p>
-          <p style="font-size:0.72rem;color:var(--text-muted);margin:4px 0 0">Interruptions: ${b.interruptions} total · ${b.avgInterruptions} avg/session</p>`;
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:1.5rem">${levelIcons[b.level] || '❓'}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:${color}">${b.score}%</span>
+          </div>
+          <p style="font-size:0.8rem;color:var(--text-secondary);margin:0 0 4px">${escHtml(b.message)}</p>
+          <p style="font-size:0.72rem;color:var(--text-muted);margin:0">Interruptions: ${b.interruptions} total · ${b.avgInterruptions} avg/session</p>`;
     } catch (e) {
         el.innerHTML = `<p class="text-muted" style="font-size:0.85rem">Unable to load burnout data.</p>`;
     }
