@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: adaptive-study-planning
+    runtime: java
+    rootDir: java
+    buildCommand: mvn package -DskipTests
+    startCommand: java -jar target/adaptive-study-planning-1.0.0.jar
